@@ -283,7 +283,7 @@
      </font>
     </property>
     <property name="currentIndex">
-     <number>1</number>
+     <number>0</number>
     </property>
     <widget class="QWidget" name="tab">
      <attribute name="title">
@@ -799,6 +799,13 @@
                <verstretch>0</verstretch>
               </sizepolicy>
              </property>
+             <property name="font">
+              <font>
+               <pointsize>12</pointsize>
+               <weight>50</weight>
+               <bold>false</bold>
+              </font>
+             </property>
              <property name="layoutDirection">
               <enum>Qt::LeftToRight</enum>
              </property>
@@ -814,6 +821,21 @@
              </item>
              <item>
               <property name="text">
+               <string>Power vs Time</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>Torque vs Time</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>RPM vs Time</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
                <string>Power vs RPM</string>
               </property>
              </item>
@@ -825,11 +847,6 @@
              <item>
               <property name="text">
                <string>Power, Torque vs RPM</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>RPM vs Time</string>
               </property>
              </item>
             </widget>

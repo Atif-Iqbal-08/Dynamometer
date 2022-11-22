@@ -62,6 +62,8 @@ private slots:
 
     void on_p4CheckBox_toggled(bool checked);
 
+    void on_tabWidget_currentChanged(int index);
+
 private:
     Ui::MainWindow *ui;
     float wheeldia =0;
