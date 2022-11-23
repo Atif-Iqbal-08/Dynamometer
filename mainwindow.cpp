@@ -9,6 +9,7 @@
 #include <wiringPi.h>
 #include <QTime>
 #include <QProgressDialog>
+#include <QFileDialog>
 
 
 
@@ -18,19 +19,20 @@ static int CHANNEL =0;
 int time0;
 int rpm1;
 unsigned char buffer[4]{0};
+int chartindex;
+bool p1,p2,p3,p4;
 
-
-
+QCPTextElement *title ;
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-
+    //############## title #####################
     ui->customPlot->plotLayout()->insertRow(0);
-    QCPTextElement *title = new QCPTextElement(ui->customPlot,"Power,Torque,RPM vs Time");
+    title = new QCPTextElement(ui->customPlot,"Power,Torque,RPM vs Time");
     ui->customPlot->plotLayout()->addElement(0,0,title);
-
+    ui->customPlot->plotLayout()->element(0,0)->setVisible(true);
 
 
     ui->sframe->setStyleSheet("background-color: rgb(0,255,0)");
@@ -47,12 +49,32 @@ MainWindow::MainWindow(QWidget *parent)
     ui->customPlot->axisRect()->axis(QCPAxis::atLeft,1)->setTickLabelColor(Qt::black);
     ui->customPlot->axisRect()->axis(QCPAxis::atLeft,1)->setTickPen(QPen (Qt::black));
     ui->customPlot->axisRect()->axis(QCPAxis::atLeft,1)->setBasePen(QPen(Qt::black));
-    ui->customPlot->axisRect()->axis(QCPAxis::atLeft,1)->setRange(0,300);
+    ui->customPlot->axisRect()->axis(QCPAxis::atLeft,1)->setRange(0,500);
     ui->customPlot->axisRect()->axis(QCPAxis::atLeft,1)->setVisible(true); // set to true
     ui->customPlot->axisRect()->axis(QCPAxis::atLeft,1)->grid()->setVisible(true); // set to true
     ui->customPlot->axisRect()->axis(QCPAxis::atLeft,1)->grid()->setPen(QPen(QColor(140, 140, 140), 1, Qt::DotLine));
     ui->customPlot->axisRect()->axis(QCPAxis::atLeft,1)->grid()->setSubGridVisible(true);
     ui->customPlot->axisRect()->axis(QCPAxis::atLeft,1)->grid()->setSubGridPen(QPen(QColor(80, 80, 80), 1, Qt::DotLine));
+
+    //############# RPM at a x-axis
+    // power axis at left
+    ui->customPlot->axisRect()->addAxis(QCPAxis::atBottom);
+    ui->customPlot->axisRect()->axis(QCPAxis::atBottom,0) ->setPadding(30);
+    ui->customPlot->axisRect()->axis(QCPAxis::atBottom,1) ->setPadding(30);
+    ui->customPlot->axisRect()->axis(QCPAxis::atBottom,1)->setLabel("RPM");
+    ui->customPlot->axisRect()->axis(QCPAxis::atBottom,1)->setLabelColor(Qt::black);
+    ui->customPlot->axisRect()->axis(QCPAxis::atBottom,1)->setTickLabelColor(Qt::black);
+    ui->customPlot->axisRect()->axis(QCPAxis::atBottom,1)->setTickPen(QPen (Qt::black));
+    ui->customPlot->axisRect()->axis(QCPAxis::atBottom,1)->setBasePen(QPen(Qt::black));
+    ui->customPlot->axisRect()->axis(QCPAxis::atBottom,1)->setRange(0,30000);
+    ui->customPlot->axisRect()->axis(QCPAxis::atBottom,1)->setVisible(false); // set to true
+    ui->customPlot->axisRect()->axis(QCPAxis::atBottom,1)->grid()->setVisible(true); // set to true
+    ui->customPlot->axisRect()->axis(QCPAxis::atBottom,1)->grid()->setPen(QPen(QColor(140, 140, 140), 1, Qt::DotLine));
+    ui->customPlot->axisRect()->axis(QCPAxis::atBottom,1)->grid()->setSubGridVisible(true);
+    ui->customPlot->axisRect()->axis(QCPAxis::atBottom,1)->grid()->setSubGridPen(QPen(QColor(80, 80, 80), 1, Qt::DotLine));
+
+
+
     // Time Axis
 
 
@@ -118,6 +140,11 @@ MainWindow::MainWindow(QWidget *parent)
     on_p2CheckBox_toggled(false);
     on_p3CheckBox_toggled(false);
     on_p4CheckBox_toggled(false);
+
+    on_chartviewtype_activated(0);
+
+
+    ui->customPlot->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom);
 
 
 
@@ -304,7 +331,7 @@ void MainWindow::statusupdate(QString message)
 }
 
 void MainWindow::on_capture_clicked()
-{
+{wiringPiSPISetup(CHANNEL, 5000000);
     if (ok!=false)
     {  qDebug()<<timer.restart();
         lastPointKey = 0;
@@ -430,16 +457,29 @@ void MainWindow::realtimeDataSlot()
 
     double key = timer.elapsed()/1000.0; // time elapsed since start of demo, in seconds
 
-    if (key-lastPointKey > 0.05) // at most add point every 2 ms
-    { double rpm = spi();
-        double torq=torque(0.05,rpm);
-        double power = powercal(torq,rpm);
+    if (key-lastPointKey > 0.1) // at most add point every 2 ms
+    {
+        double rpm= 0;
+        double torq= 0;
+        double power = 0;
+
+        rpm = spi();
+        torq=torque(0.05,rpm);
+        power = powercal(torq,rpm);
+
+
+        if(key > 15)
+
+            ui->customPlot->graph(1)->addData(key, rpm);
+
+        ui->customPlot->graph(0)->addData(key, torq);
+        ui->customPlot->graph(2)->addData(key,power);
 
 
         // add data to lines:
-        ui->customPlot->graph(1)->addData(key, rpm);
-        ui->customPlot->graph(0)->addData(key, torq);
-        ui->customPlot->graph(2)->addData(key,power);
+        // ui->customPlot->graph(1)->addData(key, rpm);
+        //ui->customPlot->graph(0)->addData(key, torq);
+        //ui->customPlot->graph(2)->addData(key,power);
         max(rpm,torq,power);
 
 
@@ -490,7 +530,7 @@ void MainWindow::realtimeDataSlot()
 double MainWindow::spi()
 {
 
-    wiringPiSPISetup(CHANNEL, 5000000);
+
     long int ltw = 0;
 
     for(int j= 0; j<4; j++)
@@ -567,6 +607,9 @@ void MainWindow::max(double arpm, double atrq, double apwr)
 
 void MainWindow::on_clear_plot_capture_clicked()
 {
+
+
+
     ui->customPlot->graph(0)->data()->clear();
     ui->customPlot->graph(1)->data()->clear();
     ui->customPlot->graph(2)->data()->clear();
@@ -595,6 +638,10 @@ void MainWindow::on_clear_plot_capture_clicked()
     ui->rpm->display(0);
     ui->torque->display(0);
     ui->power->display(0);
+
+
+
+
 
 }
 
@@ -640,6 +687,22 @@ void MainWindow::on_savetoprofile_r_clicked()
                     p1_rpm.append(qrpm.at(i));
                     p1_trq.append(qtrq.at(i));
                     ui->progressBar->setValue(i);
+                    ui->customPlot->graph(3)->addData(p1_time,p1_pwr);
+                    ui->customPlot->graph(4)->addData(p1_time,p1_trq);
+                    ui->customPlot->graph(5)->addData(p1_time,p1_rpm);
+                    ui->customPlot->graph(6)->addData(p1_rpm,p1_pwr);
+                    ui->customPlot->graph(7)->addData(p1_rpm,p1_trq);
+
+                    ui->customPlot->graph(3)->rescaleValueAxis(true);
+                    ui->customPlot->graph(4)->rescaleValueAxis(true);
+                    ui->customPlot->graph(5)->rescaleValueAxis(true);
+                    ui->customPlot->graph(6)->rescaleValueAxis(true);
+                    ui->customPlot->graph(7)->rescaleValueAxis(true);
+
+
+
+
+
                 }
                 ui->progressBar->setVisible(false);
 
@@ -664,6 +727,20 @@ void MainWindow::on_savetoprofile_r_clicked()
                         p1_rpm.append(qrpm.at(i));
                         p1_trq.append(qtrq.at(i));
                         ui->progressBar->setValue(i);
+
+                        ui->customPlot->graph(3)->addData(p1_time,p1_pwr);
+                        ui->customPlot->graph(4)->addData(p1_time,p1_trq);
+                        ui->customPlot->graph(5)->addData(p1_time,p1_rpm);
+                        ui->customPlot->graph(6)->addData(p1_rpm,p1_pwr);
+                        ui->customPlot->graph(7)->addData(p1_rpm,p1_trq);
+                        ui->customPlot->graph(3)->rescaleValueAxis(true);
+                        ui->customPlot->graph(4)->rescaleValueAxis(true);
+                        ui->customPlot->graph(5)->rescaleValueAxis(true);
+                        ui->customPlot->graph(6)->rescaleValueAxis(true);
+                        ui->customPlot->graph(7)->rescaleValueAxis(true);
+
+
+
                     }
                     ui->progressBar->setVisible(false);
 
@@ -694,6 +771,22 @@ void MainWindow::on_savetoprofile_r_clicked()
                     p2_rpm.append(qrpm.at(i));
                     p2_trq.append(qtrq.at(i));
                     ui->progressBar->setValue(i);
+
+                    ui->customPlot->graph(8)->addData(p2_time,p2_pwr);
+                    ui->customPlot->graph(9)->addData(p2_time,p2_trq);
+                    ui->customPlot->graph(10)->addData(p2_time,p2_rpm);
+                    ui->customPlot->graph(11)->addData(p2_rpm,p2_pwr);
+                    ui->customPlot->graph(12)->addData(p2_rpm,p2_trq);
+                    ui->customPlot->graph(8)->rescaleValueAxis(true);
+                    ui->customPlot->graph(9)->rescaleValueAxis(true);
+                    ui->customPlot->graph(10)->rescaleValueAxis(true);
+                    ui->customPlot->graph(11)->rescaleValueAxis(true);
+                    ui->customPlot->graph(12)->rescaleValueAxis(true);
+
+
+
+
+
                 }
                 ui->progressBar->setVisible(false);
 
@@ -718,6 +811,18 @@ void MainWindow::on_savetoprofile_r_clicked()
                         p2_rpm.append(qrpm.at(i));
                         p2_trq.append(qtrq.at(i));
                         ui->progressBar->setValue(i);
+
+                        ui->customPlot->graph(8)->addData(p2_time,p2_pwr);
+                        ui->customPlot->graph(9)->addData(p2_time,p2_trq);
+                        ui->customPlot->graph(10)->addData(p2_time,p2_rpm);
+                        ui->customPlot->graph(11)->addData(p2_rpm,p2_pwr);
+                        ui->customPlot->graph(12)->addData(p2_rpm,p2_trq);
+                        ui->customPlot->graph(8)->rescaleValueAxis(true);
+                        ui->customPlot->graph(9)->rescaleValueAxis(true);
+                        ui->customPlot->graph(10)->rescaleValueAxis(true);
+                        ui->customPlot->graph(11)->rescaleValueAxis(true);
+                        ui->customPlot->graph(12)->rescaleValueAxis(true);
+
                     }
                     ui->progressBar->setVisible(false);
 
@@ -748,6 +853,21 @@ void MainWindow::on_savetoprofile_r_clicked()
                     p3_rpm.append(qrpm.at(i));
                     p3_trq.append(qtrq.at(i));
                     ui->progressBar->setValue(i);
+                    ui->customPlot->graph(13)->addData(p3_time,p3_pwr);
+                    ui->customPlot->graph(14)->addData(p2_time,p3_trq);
+                    ui->customPlot->graph(15)->addData(p3_time,p3_rpm);
+                    ui->customPlot->graph(16)->addData(p3_rpm,p3_pwr);
+                    ui->customPlot->graph(17)->addData(p3_rpm,p3_trq);
+
+                    ui->customPlot->graph(13)->rescaleValueAxis(true);
+                    ui->customPlot->graph(14)->rescaleValueAxis(true);
+                    ui->customPlot->graph(15)->rescaleValueAxis(true);
+                    ui->customPlot->graph(16)->rescaleValueAxis(true);
+                    ui->customPlot->graph(17)->rescaleValueAxis(true);
+
+
+
+
                 }
                 ui->progressBar->setVisible(false);
 
@@ -772,6 +892,19 @@ void MainWindow::on_savetoprofile_r_clicked()
                         p3_rpm.append(qrpm.at(i));
                         p3_trq.append(qtrq.at(i));
                         ui->progressBar->setValue(i);
+
+                        ui->customPlot->graph(13)->addData(p3_time,p3_pwr);
+                        ui->customPlot->graph(14)->addData(p2_time,p3_trq);
+                        ui->customPlot->graph(15)->addData(p3_time,p3_rpm);
+                        ui->customPlot->graph(16)->addData(p3_rpm,p3_pwr);
+                        ui->customPlot->graph(17)->addData(p3_rpm,p3_trq);
+
+
+                        ui->customPlot->graph(13)->rescaleValueAxis(true);
+                        ui->customPlot->graph(14)->rescaleValueAxis(true);
+                        ui->customPlot->graph(15)->rescaleValueAxis(true);
+                        ui->customPlot->graph(16)->rescaleValueAxis(true);
+                        ui->customPlot->graph(17)->rescaleValueAxis(true);
                     }
                     ui->progressBar->setVisible(false);
 
@@ -802,6 +935,21 @@ void MainWindow::on_savetoprofile_r_clicked()
                     p4_rpm.append(qrpm.at(i));
                     p4_trq.append(qtrq.at(i));
                     ui->progressBar->setValue(i);
+
+                    ui->customPlot->graph(18)->addData(p4_time,p4_pwr);
+                    ui->customPlot->graph(19)->addData(p4_time,p4_trq);
+                    ui->customPlot->graph(20)->addData(p4_time,p4_rpm);
+                    ui->customPlot->graph(21)->addData(p4_rpm,p4_pwr);
+                    ui->customPlot->graph(22)->addData(p4_rpm,p4_trq);
+                    ui->customPlot->graph(18)->rescaleValueAxis(true);
+                    ui->customPlot->graph(19)->rescaleValueAxis(true);
+                    ui->customPlot->graph(20)->rescaleValueAxis(true);
+                    ui->customPlot->graph(21)->rescaleValueAxis(true);
+                    ui->customPlot->graph(22)->rescaleValueAxis(true);
+
+
+
+
                 }
                 ui->progressBar->setVisible(false);
 
@@ -826,6 +974,17 @@ void MainWindow::on_savetoprofile_r_clicked()
                         p4_rpm.append(qrpm.at(i));
                         p4_trq.append(qtrq.at(i));
                         ui->progressBar->setValue(i);
+                        ui->customPlot->graph(18)->addData(p4_time,p4_pwr);
+                        ui->customPlot->graph(19)->addData(p4_time,p4_trq);
+                        ui->customPlot->graph(20)->addData(p4_time,p4_rpm);
+                        ui->customPlot->graph(21)->addData(p4_rpm,p4_pwr);
+                        ui->customPlot->graph(22)->addData(p4_rpm,p4_trq);
+                        ui->customPlot->graph(18)->rescaleValueAxis(true);
+                        ui->customPlot->graph(19)->rescaleValueAxis(true);
+                        ui->customPlot->graph(20)->rescaleValueAxis(true);
+                        ui->customPlot->graph(21)->rescaleValueAxis(true);
+                        ui->customPlot->graph(22)->rescaleValueAxis(true);
+
                     }
                     ui->progressBar->setVisible(false);
 
@@ -972,120 +1131,1198 @@ void MainWindow::on_updatepPlotView_clicked()
 {  // ui->customPlot->plotLayout()->addElement(0,0,title);
     ui->customPlot->replot();
     ui->customPlot->repaint();
+    on_chartviewtype_activated(chartindex);
 }
 
 void MainWindow::on_chartviewtype_activated(int index)
 {
-}
-
-void MainWindow::on_p1CheckBox_toggled(bool checked)
-{
-    ui->customPlot->graph(3)->setVisible(checked);
-    ui->customPlot->graph(4)->setVisible(checked);
-    ui->customPlot->graph(5)->setVisible(checked);
-    ui->customPlot->graph(6)->setVisible(checked);
-    ui->customPlot->graph(7)->setVisible(checked);
-    if(checked!=true)
-
+    chartindex =index;
+    switch(index)
     {
-        ui->customPlot->graph(3)->removeFromLegend();
+    case 0:
+    {  //#### pwr, trq , rpm vs time
+
+        title->setText("Power , Torque, RPM Vs Time");
+
+        ui->customPlot->xAxis->setVisible(true);  //time Axis
+        ui->customPlot->axisRect()->axis(QCPAxis::atBottom,1)->setVisible(false); //RPM Bottom
+        ui->customPlot->yAxis->setVisible(true); // Torque
+        ui->customPlot->axisRect()->axis(QCPAxis::atLeft,1)->setVisible(true); //Power
+        ui->customPlot->yAxis2->setVisible(true);// RPm at Y
+        // profile 1
+        ui->customPlot->graph(3)->setVisible(p1);
+        ui->customPlot->graph(4)->setVisible(p1);
+        ui->customPlot->graph(5)->setVisible(p1);
+        ui->customPlot->graph(6)->setVisible(false);
+        ui->customPlot->graph(7)->setVisible(false);
+        ui->customPlot->graph(6)->removeFromLegend();
+        ui->customPlot->graph(7)->removeFromLegend();
+        if(p1!=true)
+        {
+            ui->customPlot->graph(3)->removeFromLegend();
+            ui->customPlot->graph(4)->removeFromLegend();
+            ui->customPlot->graph(5)->removeFromLegend();
+            //ui->customPlot->graph(6)->removeFromLegend();
+            //ui->customPlot->graph(7)->removeFromLegend();
+        }
+        else
+        {
+            ui->customPlot->graph(3)->addToLegend();
+            ui->customPlot->graph(4)->addToLegend();
+            ui->customPlot->graph(5)->addToLegend();
+            //ui->customPlot->graph(6)->addToLegend();
+            //ui->customPlot->graph(7)->addToLegend();1
+        }
+
+        // profile 2
+        ui->customPlot->graph(8)->setVisible(p2);
+        ui->customPlot->graph(9)->setVisible(p2);
+        ui->customPlot->graph(10)->setVisible(p2);
+        ui->customPlot->graph(11)->setVisible(false);
+        ui->customPlot->graph(12)->setVisible(false);
+        ui->customPlot->graph(11)->removeFromLegend();
+        ui->customPlot->graph(12)->removeFromLegend();
+        if(p2!=true)
+        {
+            ui->customPlot->graph(8)->removeFromLegend();
+            ui->customPlot->graph(9)->removeFromLegend();
+            ui->customPlot->graph(10)->removeFromLegend();
+            //  ui->customPlot->graph(11)->removeFromLegend();
+            // ui->customPlot->graph(12)->removeFromLegend();
+        }
+        else
+        {
+            ui->customPlot->graph(8)->addToLegend();
+            ui->customPlot->graph(9)->addToLegend();
+            ui->customPlot->graph(10)->addToLegend();
+            //ui->customPlot->graph(11)->addToLegend();
+            //ui->customPlot->graph(12)->addToLegend();
+        }
+        // profile 3
+
+        ui->customPlot->graph(13)->setVisible(p3);
+        ui->customPlot->graph(14)->setVisible(p3);
+        ui->customPlot->graph(15)->setVisible(p3);
+        ui->customPlot->graph(16)->setVisible(false);
+        ui->customPlot->graph(17)->setVisible(false);
+        ui->customPlot->graph(16)->removeFromLegend();
+        ui->customPlot->graph(17)->removeFromLegend();
+        if(p3!=true)
+        {
+            ui->customPlot->graph(13)->removeFromLegend();
+            ui->customPlot->graph(14)->removeFromLegend();
+            ui->customPlot->graph(15)->removeFromLegend();
+            //ui->customPlot->graph(16)->removeFromLegend();
+            //ui->customPlot->graph(17)->removeFromLegend();
+        }
+        else
+        {
+            ui->customPlot->graph(13)->addToLegend();
+            ui->customPlot->graph(14)->addToLegend();
+            ui->customPlot->graph(15)->addToLegend();
+            //  ui->customPlot->graph(16)->addToLegend();
+            //   ui->customPlot->graph(17)->addToLegend();
+        }
+        // profile 4
+
+        ui->customPlot->graph(18)->setVisible(p4);
+        ui->customPlot->graph(19)->setVisible(p4);
+        ui->customPlot->graph(20)->setVisible(p4);
+        ui->customPlot->graph(21)->setVisible(false);
+        ui->customPlot->graph(22)->setVisible(false);
+        ui->customPlot->graph(21)->removeFromLegend();
+        ui->customPlot->graph(22)->removeFromLegend();
+        if(p4!=true)
+        {
+            ui->customPlot->graph(18)->removeFromLegend();
+            ui->customPlot->graph(19)->removeFromLegend();
+            ui->customPlot->graph(20)->removeFromLegend();
+            // ui->customPlot->graph(21)->removeFromLegend();
+            // ui->customPlot->graph(22)->removeFromLegend();
+        }
+        else
+        {
+            ui->customPlot->graph(18)->addToLegend();
+            ui->customPlot->graph(19)->addToLegend();
+            ui->customPlot->graph(20)->addToLegend();
+            //  ui->customPlot->graph(21)->addToLegend();
+            //  ui->customPlot->graph(22)->addToLegend();
+        }
+
+
+
+        break;}
+    case 1:
+    { //##### power torque vs time
+
+        title->setText("Power , Torque Vs Time");
+        ui->customPlot->xAxis->setVisible(true);
+        ui->customPlot->axisRect()->axis(QCPAxis::atBottom,1)->setVisible(false);
+        ui->customPlot->yAxis->setVisible(true);
+        ui->customPlot->axisRect()->axis(QCPAxis::atLeft,1)->setVisible(true);
+        ui->customPlot->yAxis2->setVisible(false);
+
+
+        // profile 1
+        ui->customPlot->graph(3)->setVisible(p1);
+        ui->customPlot->graph(4)->setVisible(p1);
+        ui->customPlot->graph(5)->setVisible(false);
+        ui->customPlot->graph(6)->setVisible(false);
+        ui->customPlot->graph(7)->setVisible(false);
+        ui->customPlot->graph(5)->removeFromLegend();
+        ui->customPlot->graph(6)->removeFromLegend();
+        ui->customPlot->graph(7)->removeFromLegend();
+        if(p1!=true)
+        {
+            ui->customPlot->graph(3)->removeFromLegend();
+            ui->customPlot->graph(4)->removeFromLegend();
+            //  ui->customPlot->graph(5)->removeFromLegend();
+            //ui->customPlot->graph(6)->removeFromLegend();
+            //ui->customPlot->graph(7)->removeFromLegend();
+        }
+        else
+        {
+            ui->customPlot->graph(3)->addToLegend();
+            ui->customPlot->graph(4)->addToLegend();
+            // ui->customPlot->graph(5)->addToLegend();
+            //ui->customPlot->graph(6)->addToLegend();
+            //ui->customPlot->graph(7)->addToLegend();1
+        }
+
+        // profile 2
+        ui->customPlot->graph(8)->setVisible(p2);
+        ui->customPlot->graph(9)->setVisible(p2);
+        ui->customPlot->graph(10)->setVisible(false);
+        ui->customPlot->graph(11)->setVisible(false);
+        ui->customPlot->graph(12)->setVisible(false);
+        ui->customPlot->graph(10)->removeFromLegend();
+        ui->customPlot->graph(11)->removeFromLegend();
+        ui->customPlot->graph(12)->removeFromLegend();
+        if(p2!=true)
+        {
+            ui->customPlot->graph(8)->removeFromLegend();
+            ui->customPlot->graph(9)->removeFromLegend();
+            // ui->customPlot->graph(10)->removeFromLegend();
+            //  ui->customPlot->graph(11)->removeFromLegend();
+            // ui->customPlot->graph(12)->removeFromLegend();
+        }
+        else
+        {
+            ui->customPlot->graph(8)->addToLegend();
+            ui->customPlot->graph(9)->addToLegend();
+            //  ui->customPlot->graph(10)->addToLegend();
+            //ui->customPlot->graph(11)->addToLegend();
+            //ui->customPlot->graph(12)->addToLegend();
+        }
+        // profile 3
+
+        ui->customPlot->graph(13)->setVisible(p3);
+        ui->customPlot->graph(14)->setVisible(p3);
+        ui->customPlot->graph(15)->setVisible(false);
+        ui->customPlot->graph(16)->setVisible(false);
+        ui->customPlot->graph(17)->setVisible(false);
+        ui->customPlot->graph(15)->removeFromLegend();
+        ui->customPlot->graph(16)->removeFromLegend();
+        ui->customPlot->graph(17)->removeFromLegend();
+        if(p3!=true)
+        {
+            ui->customPlot->graph(13)->removeFromLegend();
+            ui->customPlot->graph(14)->removeFromLegend();
+            //  ui->customPlot->graph(15)->removeFromLegend();
+            //ui->customPlot->graph(16)->removeFromLegend();
+            //ui->customPlot->graph(17)->removeFromLegend();
+        }
+        else
+        {
+            ui->customPlot->graph(13)->addToLegend();
+            ui->customPlot->graph(14)->addToLegend();
+            // ui->customPlot->graph(15)->addToLegend();
+            //  ui->customPlot->graph(16)->addToLegend();
+            //   ui->customPlot->graph(17)->addToLegend();
+        }
+        // profile 4
+
+        ui->customPlot->graph(18)->setVisible(p4);
+        ui->customPlot->graph(19)->setVisible(p4);
+        ui->customPlot->graph(20)->setVisible(false);
+        ui->customPlot->graph(21)->setVisible(false);
+        ui->customPlot->graph(22)->setVisible(false);
+        ui->customPlot->graph(20)->removeFromLegend();
+        ui->customPlot->graph(21)->removeFromLegend();
+        ui->customPlot->graph(22)->removeFromLegend();
+        if(p4!=true)
+        {
+            ui->customPlot->graph(18)->removeFromLegend();
+            ui->customPlot->graph(19)->removeFromLegend();
+            // ui->customPlot->graph(20)->removeFromLegend();
+            // ui->customPlot->graph(21)->removeFromLegend();
+            // ui->customPlot->graph(22)->removeFromLegend();
+        }
+        else
+        {
+            ui->customPlot->graph(18)->addToLegend();
+            ui->customPlot->graph(19)->addToLegend();
+            // ui->customPlot->graph(20)->addToLegend();
+            //  ui->customPlot->graph(21)->addToLegend();
+            //  ui->customPlot->graph(22)->addToLegend();
+        }
+
+
+
+
+
+        break;}
+    case 2:
+    { //##### power vs time
+
+
+
+        title->setText("Power Vs Time");
+        ui->customPlot->xAxis->setVisible(true);
+        ui->customPlot->axisRect()->axis(QCPAxis::atBottom,1)->setVisible(false);
+        ui->customPlot->yAxis->setVisible(false);
+        ui->customPlot->axisRect()->axis(QCPAxis::atLeft,1)->setVisible(true);
+        ui->customPlot->yAxis2->setVisible(false);
+
+
+        // profile 1
+        ui->customPlot->graph(3)->setVisible(p1);
+        ui->customPlot->graph(4)->setVisible(false);
+        ui->customPlot->graph(5)->setVisible(false);
+        ui->customPlot->graph(6)->setVisible(false);
+        ui->customPlot->graph(7)->setVisible(false);
         ui->customPlot->graph(4)->removeFromLegend();
         ui->customPlot->graph(5)->removeFromLegend();
         ui->customPlot->graph(6)->removeFromLegend();
         ui->customPlot->graph(7)->removeFromLegend();
+        if(p1!=true)
+        {
+            ui->customPlot->graph(3)->removeFromLegend();
+            // ui->customPlot->graph(4)->removeFromLegend();
+            //  ui->customPlot->graph(5)->removeFromLegend();
+            //ui->customPlot->graph(6)->removeFromLegend();
+            //ui->customPlot->graph(7)->removeFromLegend();
+        }
+        else
+        {
+            ui->customPlot->graph(3)->addToLegend();
+            // ui->customPlot->graph(4)->addToLegend();
+            // ui->customPlot->graph(5)->addToLegend();
+            //ui->customPlot->graph(6)->addToLegend();
+            //ui->customPlot->graph(7)->addToLegend();1
+        }
+
+        // profile 2
+        ui->customPlot->graph(8)->setVisible(p2);
+        ui->customPlot->graph(9)->setVisible(false);
+        ui->customPlot->graph(10)->setVisible(false);
+        ui->customPlot->graph(11)->setVisible(false);
+        ui->customPlot->graph(12)->setVisible(false);
+        ui->customPlot->graph(9)->removeFromLegend();
+        ui->customPlot->graph(10)->removeFromLegend();
+        ui->customPlot->graph(11)->removeFromLegend();
+        ui->customPlot->graph(12)->removeFromLegend();
+        if(p2!=true)
+        {
+            ui->customPlot->graph(8)->removeFromLegend();
+            // ui->customPlot->graph(9)->removeFromLegend();
+            // ui->customPlot->graph(10)->removeFromLegend();
+            //  ui->customPlot->graph(11)->removeFromLegend();
+            // ui->customPlot->graph(12)->removeFromLegend();
+        }
+        else
+        {
+            ui->customPlot->graph(8)->addToLegend();
+            //ui->customPlot->graph(9)->addToLegend();
+            //ui->customPlot->graph(10)->addToLegend();
+            //ui->customPlot->graph(11)->addToLegend();
+            //ui->customPlot->graph(12)->addToLegend();
+        }
+        // profile 3
+
+        ui->customPlot->graph(13)->setVisible(p3);
+        ui->customPlot->graph(14)->setVisible(false);
+        ui->customPlot->graph(15)->setVisible(false);
+        ui->customPlot->graph(16)->setVisible(false);
+        ui->customPlot->graph(17)->setVisible(false);
+        ui->customPlot->graph(14)->removeFromLegend();
+        ui->customPlot->graph(15)->removeFromLegend();
+        ui->customPlot->graph(16)->removeFromLegend();
+        ui->customPlot->graph(17)->removeFromLegend();
+        if(p3!=true)
+        {
+            ui->customPlot->graph(13)->removeFromLegend();
+            // ui->customPlot->graph(14)->removeFromLegend();
+            // ui->customPlot->graph(15)->removeFromLegend();
+            //ui->customPlot->graph(16)->removeFromLegend();
+            //ui->customPlot->graph(17)->removeFromLegend();
+        }
+        else
+        {
+            ui->customPlot->graph(13)->addToLegend();
+            //ui->customPlot->graph(14)->addToLegend();
+            //ui->customPlot->graph(15)->addToLegend();
+            //ui->customPlot->graph(16)->addToLegend();
+            //ui->customPlot->graph(17)->addToLegend();
+        }
+        // profile 4
+
+        ui->customPlot->graph(18)->setVisible(p4);
+        ui->customPlot->graph(19)->setVisible(false);
+        ui->customPlot->graph(20)->setVisible(false);
+        ui->customPlot->graph(21)->setVisible(false);
+        ui->customPlot->graph(22)->setVisible(false);
+        ui->customPlot->graph(19)->removeFromLegend();
+        ui->customPlot->graph(20)->removeFromLegend();
+        ui->customPlot->graph(21)->removeFromLegend();
+        ui->customPlot->graph(22)->removeFromLegend();
+        if(p4!=true)
+        {
+            ui->customPlot->graph(18)->removeFromLegend();
+            //ui->customPlot->graph(19)->removeFromLegend();
+            //ui->customPlot->graph(20)->removeFromLegend();
+            // ui->customPlot->graph(21)->removeFromLegend();
+            // ui->customPlot->graph(22)->removeFromLegend();
+        }
+        else
+        {
+            ui->customPlot->graph(18)->addToLegend();
+            //ui->customPlot->graph(19)->addToLegend();
+            //ui->customPlot->graph(20)->addToLegend();
+            //  ui->customPlot->graph(21)->addToLegend();
+            //  ui->customPlot->graph(22)->addToLegend();
+        }
+
+        break;}
+    case 3:
+    { //##### torque vs time
+
+        title->setText("Torque Vs Time");
+        ui->customPlot->xAxis->setVisible(true);
+        ui->customPlot->axisRect()->axis(QCPAxis::atBottom,1)->setVisible(false);
+        ui->customPlot->yAxis->setVisible(true);
+        ui->customPlot->axisRect()->axis(QCPAxis::atLeft,1)->setVisible(false);
+        ui->customPlot->yAxis2->setVisible(false);
+
+
+        // profile 1
+        ui->customPlot->graph(3)->setVisible(false);
+        ui->customPlot->graph(4)->setVisible(p1);
+        ui->customPlot->graph(5)->setVisible(false);
+        ui->customPlot->graph(6)->setVisible(false);
+        ui->customPlot->graph(7)->setVisible(false);
+        ui->customPlot->graph(3)->removeFromLegend();
+        ui->customPlot->graph(5)->removeFromLegend();
+        ui->customPlot->graph(6)->removeFromLegend();
+        ui->customPlot->graph(7)->removeFromLegend();
+        if(p1!=true)
+        {
+            //ui->customPlot->graph(3)->removeFromLegend();
+            ui->customPlot->graph(4)->removeFromLegend();
+            //  ui->customPlot->graph(5)->removeFromLegend();
+            //ui->customPlot->graph(6)->removeFromLegend();
+            //ui->customPlot->graph(7)->removeFromLegend();
+        }
+        else
+        {
+            //ui->customPlot->graph(3)->addToLegend();
+            ui->customPlot->graph(4)->addToLegend();
+            // ui->customPlot->graph(5)->addToLegend();
+            //ui->customPlot->graph(6)->addToLegend();
+            //ui->customPlot->graph(7)->addToLegend();1
+        }
+
+        // profile 2
+        ui->customPlot->graph(8)->setVisible(false);
+        ui->customPlot->graph(9)->setVisible(p2);
+        ui->customPlot->graph(10)->setVisible(false);
+        ui->customPlot->graph(11)->setVisible(false);
+        ui->customPlot->graph(12)->setVisible(false);
+        ui->customPlot->graph(8)->removeFromLegend();
+        ui->customPlot->graph(10)->removeFromLegend();
+        ui->customPlot->graph(11)->removeFromLegend();
+        ui->customPlot->graph(12)->removeFromLegend();
+        if(p2!=true)
+        {
+            //ui->customPlot->graph(8)->removeFromLegend();
+            ui->customPlot->graph(9)->removeFromLegend();
+            // ui->customPlot->graph(10)->removeFromLegend();
+            //  ui->customPlot->graph(11)->removeFromLegend();
+            // ui->customPlot->graph(12)->removeFromLegend();
+        }
+        else
+        {
+            //ui->customPlot->graph(8)->addToLegend();
+            ui->customPlot->graph(9)->addToLegend();
+            //ui->customPlot->graph(10)->addToLegend();
+            //ui->customPlot->graph(11)->addToLegend();
+            //ui->customPlot->graph(12)->addToLegend();
+        }
+        // profile 3
+
+        ui->customPlot->graph(13)->setVisible(false);
+        ui->customPlot->graph(14)->setVisible(p3);
+        ui->customPlot->graph(15)->setVisible(false);
+        ui->customPlot->graph(16)->setVisible(false);
+        ui->customPlot->graph(17)->setVisible(false);
+        ui->customPlot->graph(13)->removeFromLegend();
+        ui->customPlot->graph(15)->removeFromLegend();
+        ui->customPlot->graph(16)->removeFromLegend();
+        ui->customPlot->graph(17)->removeFromLegend();
+        if(p3!=true)
+        {
+            //ui->customPlot->graph(13)->removeFromLegend();
+            ui->customPlot->graph(14)->removeFromLegend();
+            // ui->customPlot->graph(15)->removeFromLegend();
+            //ui->customPlot->graph(16)->removeFromLegend();
+            //ui->customPlot->graph(17)->removeFromLegend();
+        }
+        else
+        {
+            //ui->customPlot->graph(13)->addToLegend();
+            ui->customPlot->graph(14)->addToLegend();
+            //ui->customPlot->graph(15)->addToLegend();
+            //ui->customPlot->graph(16)->addToLegend();
+            //ui->customPlot->graph(17)->addToLegend();
+        }
+        // profile 4
+
+        ui->customPlot->graph(18)->setVisible(false);
+        ui->customPlot->graph(19)->setVisible(p4);
+        ui->customPlot->graph(20)->setVisible(false);
+        ui->customPlot->graph(21)->setVisible(false);
+        ui->customPlot->graph(22)->setVisible(false);
+        ui->customPlot->graph(18)->removeFromLegend();
+        ui->customPlot->graph(20)->removeFromLegend();
+        ui->customPlot->graph(21)->removeFromLegend();
+        ui->customPlot->graph(22)->removeFromLegend();
+        if(p4!=true)
+        {
+            //ui->customPlot->graph(18)->removeFromLegend();
+            ui->customPlot->graph(19)->removeFromLegend();
+            //ui->customPlot->graph(20)->removeFromLegend();
+            // ui->customPlot->graph(21)->removeFromLegend();
+            // ui->customPlot->graph(22)->removeFromLegend();
+        }
+        else
+        {
+            //ui->customPlot->graph(18)->addToLegend();
+            ui->customPlot->graph(19)->addToLegend();
+            //ui->customPlot->graph(20)->addToLegend();
+            //  ui->customPlot->graph(21)->addToLegend();
+            //  ui->customPlot->graph(22)->addToLegend();
+        }
+
+        break;}
+    case 4:
+    { //##### RPM vs time
+        title->setText("RPM Vs Time");
+        ui->customPlot->xAxis->setVisible(true);
+        ui->customPlot->axisRect()->axis(QCPAxis::atBottom,1)->setVisible(false);
+        ui->customPlot->yAxis->setVisible(false);
+        ui->customPlot->axisRect()->axis(QCPAxis::atLeft,1)->setVisible(false);
+        ui->customPlot->yAxis2->setVisible(true);
+
+        // profile 1
+        ui->customPlot->graph(3)->setVisible(false);
+        ui->customPlot->graph(4)->setVisible(false);
+        ui->customPlot->graph(5)->setVisible(p1);
+        ui->customPlot->graph(6)->setVisible(false);
+        ui->customPlot->graph(7)->setVisible(false);
+        ui->customPlot->graph(3)->removeFromLegend();
+        ui->customPlot->graph(4)->removeFromLegend();
+        ui->customPlot->graph(6)->removeFromLegend();
+        ui->customPlot->graph(7)->removeFromLegend();
+        if(p1!=true)
+        {
+            //ui->customPlot->graph(3)->removeFromLegend();
+            //ui->customPlot->graph(4)->removeFromLegend();
+            ui->customPlot->graph(5)->removeFromLegend();
+            //ui->customPlot->graph(6)->removeFromLegend();
+            //ui->customPlot->graph(7)->removeFromLegend();
+        }
+        else
+        {
+            //ui->customPlot->graph(3)->addToLegend();
+            // ui->customPlot->graph(4)->addToLegend();
+            ui->customPlot->graph(5)->addToLegend();
+            //ui->customPlot->graph(6)->addToLegend();
+            //ui->customPlot->graph(7)->addToLegend();1
+        }
+
+        // profile 2
+        ui->customPlot->graph(8)->setVisible(false);
+        ui->customPlot->graph(9)->setVisible(false);
+        ui->customPlot->graph(10)->setVisible(p2);
+        ui->customPlot->graph(11)->setVisible(false);
+        ui->customPlot->graph(12)->setVisible(false);
+        ui->customPlot->graph(8)->removeFromLegend();
+        ui->customPlot->graph(9)->removeFromLegend();
+        ui->customPlot->graph(11)->removeFromLegend();
+        ui->customPlot->graph(12)->removeFromLegend();
+        if(p2!=true)
+        {
+            //ui->customPlot->graph(8)->removeFromLegend();
+            //ui->customPlot->graph(9)->removeFromLegend();
+            ui->customPlot->graph(10)->removeFromLegend();
+            //  ui->customPlot->graph(11)->removeFromLegend();
+            // ui->customPlot->graph(12)->removeFromLegend();
+        }
+        else
+        {
+            //ui->customPlot->graph(8)->addToLegend();
+            //ui->customPlot->graph(9)->addToLegend();
+            ui->customPlot->graph(10)->addToLegend();
+            //ui->customPlot->graph(11)->addToLegend();
+            //ui->customPlot->graph(12)->addToLegend();
+        }
+        // profile 3
+
+        ui->customPlot->graph(13)->setVisible(false);
+        ui->customPlot->graph(14)->setVisible(false);
+        ui->customPlot->graph(15)->setVisible(p3);
+        ui->customPlot->graph(16)->setVisible(false);
+        ui->customPlot->graph(17)->setVisible(false);
+        ui->customPlot->graph(13)->removeFromLegend();
+        ui->customPlot->graph(14)->removeFromLegend();
+        ui->customPlot->graph(16)->removeFromLegend();
+        ui->customPlot->graph(17)->removeFromLegend();
+        if(p3!=true)
+        {
+            //ui->customPlot->graph(13)->removeFromLegend();
+            //ui->customPlot->graph(14)->removeFromLegend();
+            ui->customPlot->graph(15)->removeFromLegend();
+            //ui->customPlot->graph(16)->removeFromLegend();
+            //ui->customPlot->graph(17)->removeFromLegend();
+        }
+        else
+        {
+            //ui->customPlot->graph(13)->addToLegend();
+            //ui->customPlot->graph(14)->addToLegend();
+            ui->customPlot->graph(15)->addToLegend();
+            //ui->customPlot->graph(16)->addToLegend();
+            //ui->customPlot->graph(17)->addToLegend();
+        }
+        // profile 4
+
+        ui->customPlot->graph(18)->setVisible(false);
+        ui->customPlot->graph(19)->setVisible(false);
+        ui->customPlot->graph(20)->setVisible(p4);
+        ui->customPlot->graph(21)->setVisible(false);
+        ui->customPlot->graph(22)->setVisible(false);
+        ui->customPlot->graph(18)->removeFromLegend();
+        ui->customPlot->graph(19)->removeFromLegend();
+        ui->customPlot->graph(21)->removeFromLegend();
+        ui->customPlot->graph(22)->removeFromLegend();
+        if(p4!=true)
+        {
+            //ui->customPlot->graph(18)->removeFromLegend();
+            //ui->customPlot->graph(19)->removeFromLegend();
+            ui->customPlot->graph(20)->removeFromLegend();
+            // ui->customPlot->graph(21)->removeFromLegend();
+            // ui->customPlot->graph(22)->removeFromLegend();
+        }
+        else
+        {
+            //ui->customPlot->graph(18)->addToLegend();
+            //ui->customPlot->graph(19)->addToLegend();
+            ui->customPlot->graph(20)->addToLegend();
+            //  ui->customPlot->graph(21)->addToLegend();
+            //  ui->customPlot->graph(22)->addToLegend();
+        }
+
+
+
+
+        break;}
+    case 5:
+    {  //##### power vs rpm
+        title->setText("Power Vs RPM");
+        ui->customPlot->xAxis->setVisible(false);
+        ui->customPlot->axisRect()->axis(QCPAxis::atBottom,1)->setVisible(true);
+        ui->customPlot->yAxis->setVisible(false);
+        ui->customPlot->axisRect()->axis(QCPAxis::atLeft,1)->setVisible(true);
+        ui->customPlot->yAxis2->setVisible(false);
+
+
+        // profile 1
+        ui->customPlot->graph(3)->setVisible(false);
+        ui->customPlot->graph(4)->setVisible(false);
+        ui->customPlot->graph(5)->setVisible(false);
+        ui->customPlot->graph(6)->setVisible(p1);
+        ui->customPlot->graph(7)->setVisible(false);
+        ui->customPlot->graph(3)->removeFromLegend();
+        ui->customPlot->graph(4)->removeFromLegend();
+        ui->customPlot->graph(5)->removeFromLegend();
+        ui->customPlot->graph(7)->removeFromLegend();
+        if(p1!=true)
+        {
+            //ui->customPlot->graph(3)->removeFromLegend();
+            //ui->customPlot->graph(4)->removeFromLegend();
+            //ui->customPlot->graph(5)->removeFromLegend();
+            ui->customPlot->graph(6)->removeFromLegend();
+            //ui->customPlot->graph(7)->removeFromLegend();
+        }
+        else
+        {
+            //ui->customPlot->graph(3)->addToLegend();
+            // ui->customPlot->graph(4)->addToLegend();
+            // ui->customPlot->graph(5)->addToLegend();
+            ui->customPlot->graph(6)->addToLegend();
+            //ui->customPlot->graph(7)->addToLegend();1
+        }
+
+        // profile 2
+        ui->customPlot->graph(8)->setVisible(false);
+        ui->customPlot->graph(9)->setVisible(false);
+        ui->customPlot->graph(10)->setVisible(false);
+        ui->customPlot->graph(11)->setVisible(p2);
+        ui->customPlot->graph(12)->setVisible(false);
+        ui->customPlot->graph(8)->removeFromLegend();
+        ui->customPlot->graph(9)->removeFromLegend();
+        ui->customPlot->graph(10)->removeFromLegend();
+        ui->customPlot->graph(12)->removeFromLegend();
+        if(p2!=true)
+        {
+            //ui->customPlot->graph(8)->removeFromLegend();
+            //ui->customPlot->graph(9)->removeFromLegend();
+            //ui->customPlot->graph(10)->removeFromLegend();
+            ui->customPlot->graph(11)->removeFromLegend();
+            // ui->customPlot->graph(12)->removeFromLegend();
+        }
+        else
+        {
+            //ui->customPlot->graph(8)->addToLegend();
+            //ui->customPlot->graph(9)->addToLegend();
+            //ui->customPlot->graph(10)->addToLegend();
+            ui->customPlot->graph(11)->addToLegend();
+            //ui->customPlot->graph(12)->addToLegend();
+        }
+        // profile 3
+
+        ui->customPlot->graph(13)->setVisible(false);
+        ui->customPlot->graph(14)->setVisible(false);
+        ui->customPlot->graph(15)->setVisible(false);
+        ui->customPlot->graph(16)->setVisible(p3);
+        ui->customPlot->graph(17)->setVisible(false);
+        ui->customPlot->graph(13)->removeFromLegend();
+        ui->customPlot->graph(14)->removeFromLegend();
+        ui->customPlot->graph(15)->removeFromLegend();
+        ui->customPlot->graph(17)->removeFromLegend();
+        if(p3!=true)
+        {
+            //ui->customPlot->graph(13)->removeFromLegend();
+            //ui->customPlot->graph(14)->removeFromLegend();
+            //ui->customPlot->graph(15)->removeFromLegend();
+            ui->customPlot->graph(16)->removeFromLegend();
+            //ui->customPlot->graph(17)->removeFromLegend();
+        }
+        else
+        {
+            //ui->customPlot->graph(13)->addToLegend();
+            //ui->customPlot->graph(14)->addToLegend();
+            //ui->customPlot->graph(15)->addToLegend();
+            ui->customPlot->graph(16)->addToLegend();
+            //ui->customPlot->graph(17)->addToLegend();
+        }
+        // profile 4
+
+        ui->customPlot->graph(18)->setVisible(false);
+        ui->customPlot->graph(19)->setVisible(false);
+        ui->customPlot->graph(20)->setVisible(false);
+        ui->customPlot->graph(21)->setVisible(p4);
+        ui->customPlot->graph(22)->setVisible(false);
+        ui->customPlot->graph(18)->removeFromLegend();
+        ui->customPlot->graph(19)->removeFromLegend();
+        ui->customPlot->graph(20)->removeFromLegend();
+        ui->customPlot->graph(22)->removeFromLegend();
+        if(p4!=true)
+        {
+            //ui->customPlot->graph(18)->removeFromLegend();
+            //ui->customPlot->graph(19)->removeFromLegend();
+            //ui->customPlot->graph(20)->removeFromLegend();
+            ui->customPlot->graph(21)->removeFromLegend();
+            // ui->customPlot->graph(22)->removeFromLegend();
+        }
+        else
+        {
+            //ui->customPlot->graph(18)->addToLegend();
+            //ui->customPlot->graph(19)->addToLegend();
+            //ui->customPlot->graph(20)->addToLegend();
+            ui->customPlot->graph(21)->addToLegend();
+            //  ui->customPlot->graph(22)->addToLegend();
+        }
+
+
+
+
+        break;}
+    case 6:
+    { //##### torque vs rpm
+        title->setText("Torque Vs RPM");
+        ui->customPlot->xAxis->setVisible(false);
+        ui->customPlot->axisRect()->axis(QCPAxis::atBottom,1)->setVisible(true);
+        ui->customPlot->yAxis->setVisible(true);
+        ui->customPlot->axisRect()->axis(QCPAxis::atLeft,1)->setVisible(false);
+        ui->customPlot->yAxis2->setVisible(false);
+
+
+        // profile 1
+        ui->customPlot->graph(3)->setVisible(false);
+        ui->customPlot->graph(4)->setVisible(false);
+        ui->customPlot->graph(5)->setVisible(false);
+        ui->customPlot->graph(6)->setVisible(false);
+        ui->customPlot->graph(7)->setVisible(p1);
+        ui->customPlot->graph(3)->removeFromLegend();
+        ui->customPlot->graph(4)->removeFromLegend();
+        ui->customPlot->graph(5)->removeFromLegend();
+        ui->customPlot->graph(6)->removeFromLegend();
+        if(p1!=true)
+        {
+            //ui->customPlot->graph(3)->removeFromLegend();
+            //ui->customPlot->graph(4)->removeFromLegend();
+            //ui->customPlot->graph(5)->removeFromLegend();
+            //ui->customPlot->graph(6)->removeFromLegend();
+            ui->customPlot->graph(7)->removeFromLegend();
+        }
+        else
+        {
+            //ui->customPlot->graph(3)->addToLegend();
+            // ui->customPlot->graph(4)->addToLegend();
+            // ui->customPlot->graph(5)->addToLegend();
+            //ui->customPlot->graph(6)->addToLegend();
+            ui->customPlot->graph(7)->addToLegend();
+        }
+
+        // profile 2
+        ui->customPlot->graph(8)->setVisible(false);
+        ui->customPlot->graph(9)->setVisible(false);
+        ui->customPlot->graph(10)->setVisible(false);
+        ui->customPlot->graph(11)->setVisible(false);
+        ui->customPlot->graph(12)->setVisible(p2);
+        ui->customPlot->graph(8)->removeFromLegend();
+        ui->customPlot->graph(9)->removeFromLegend();
+        ui->customPlot->graph(10)->removeFromLegend();
+        ui->customPlot->graph(11)->removeFromLegend();
+        if(p2!=true)
+        {
+            //ui->customPlot->graph(8)->removeFromLegend();
+            //ui->customPlot->graph(9)->removeFromLegend();
+            //ui->customPlot->graph(10)->removeFromLegend();
+            //ui->customPlot->graph(11)->removeFromLegend();
+            ui->customPlot->graph(12)->removeFromLegend();
+        }
+        else
+        {
+            //ui->customPlot->graph(8)->addToLegend();
+            //ui->customPlot->graph(9)->addToLegend();
+            //ui->customPlot->graph(10)->addToLegend();
+            //ui->customPlot->graph(11)->addToLegend();
+            ui->customPlot->graph(12)->addToLegend();
+        }
+        // profile 3
+
+        ui->customPlot->graph(13)->setVisible(false);
+        ui->customPlot->graph(14)->setVisible(false);
+        ui->customPlot->graph(15)->setVisible(false);
+        ui->customPlot->graph(16)->setVisible(false);
+        ui->customPlot->graph(17)->setVisible(p3);
+        ui->customPlot->graph(13)->removeFromLegend();
+        ui->customPlot->graph(14)->removeFromLegend();
+        ui->customPlot->graph(15)->removeFromLegend();
+        ui->customPlot->graph(16)->removeFromLegend();
+        if(p3!=true)
+        {
+            //ui->customPlot->graph(13)->removeFromLegend();
+            //ui->customPlot->graph(14)->removeFromLegend();
+            //ui->customPlot->graph(15)->removeFromLegend();
+            //ui->customPlot->graph(16)->removeFromLegend();
+            ui->customPlot->graph(17)->removeFromLegend();
+        }
+        else
+        {
+            //ui->customPlot->graph(13)->addToLegend();
+            //ui->customPlot->graph(14)->addToLegend();
+            //ui->customPlot->graph(15)->addToLegend();
+            //ui->customPlot->graph(16)->addToLegend();
+            ui->customPlot->graph(17)->addToLegend();
+        }
+        // profile 4
+
+        ui->customPlot->graph(18)->setVisible(false);
+        ui->customPlot->graph(19)->setVisible(false);
+        ui->customPlot->graph(20)->setVisible(false);
+        ui->customPlot->graph(21)->setVisible(false);
+        ui->customPlot->graph(22)->setVisible(p4);
+        ui->customPlot->graph(18)->removeFromLegend();
+        ui->customPlot->graph(19)->removeFromLegend();
+        ui->customPlot->graph(20)->removeFromLegend();
+        ui->customPlot->graph(21)->removeFromLegend();
+        if(p4!=true)
+        {
+            //ui->customPlot->graph(18)->removeFromLegend();
+            //ui->customPlot->graph(19)->removeFromLegend();
+            //ui->customPlot->graph(20)->removeFromLegend();
+            //ui->customPlot->graph(21)->removeFromLegend();
+            ui->customPlot->graph(22)->removeFromLegend();
+        }
+        else
+        {
+            //ui->customPlot->graph(18)->addToLegend();
+            //ui->customPlot->graph(19)->addToLegend();
+            //ui->customPlot->graph(20)->addToLegend();
+            //  ui->customPlot->graph(21)->addToLegend();
+            ui->customPlot->graph(22)->addToLegend();
+        }
+
+        break;}
+    case 7:
+    { //##### power , torque vs rpm
+        title->setText("Power ,Torque Vs RPM");
+        ui->customPlot->xAxis->setVisible(false);
+        ui->customPlot->axisRect()->axis(QCPAxis::atBottom,1)->setVisible(true);
+        ui->customPlot->yAxis->setVisible(true);
+        ui->customPlot->axisRect()->axis(QCPAxis::atLeft,1)->setVisible(true);
+        ui->customPlot->yAxis2->setVisible(false);
+
+
+        // profile 1
+        ui->customPlot->graph(3)->setVisible(false);
+        ui->customPlot->graph(4)->setVisible(false);
+        ui->customPlot->graph(5)->setVisible(false);
+        ui->customPlot->graph(6)->setVisible(p1);
+        ui->customPlot->graph(7)->setVisible(p1);
+        ui->customPlot->graph(3)->removeFromLegend();
+        ui->customPlot->graph(4)->removeFromLegend();
+        ui->customPlot->graph(5)->removeFromLegend();
+        // ui->customPlot->graph(6)->removeFromLegend();
+        if(p1!=true)
+        {
+            //ui->customPlot->graph(3)->removeFromLegend();
+            //ui->customPlot->graph(4)->removeFromLegend();
+            //ui->customPlot->graph(5)->removeFromLegend();
+            ui->customPlot->graph(6)->removeFromLegend();
+            ui->customPlot->graph(7)->removeFromLegend();
+        }
+        else
+        {
+            //ui->customPlot->graph(3)->addToLegend();
+            // ui->customPlot->graph(4)->addToLegend();
+            // ui->customPlot->graph(5)->addToLegend();
+            ui->customPlot->graph(6)->addToLegend();
+            ui->customPlot->graph(7)->addToLegend();
+        }
+
+        // profile 2
+        ui->customPlot->graph(8)->setVisible(false);
+        ui->customPlot->graph(9)->setVisible(false);
+        ui->customPlot->graph(10)->setVisible(false);
+        ui->customPlot->graph(11)->setVisible(p2);
+        ui->customPlot->graph(12)->setVisible(p2);
+        ui->customPlot->graph(8)->removeFromLegend();
+        ui->customPlot->graph(9)->removeFromLegend();
+        ui->customPlot->graph(10)->removeFromLegend();
+        // ui->customPlot->graph(11)->removeFromLegend();
+        if(p2!=true)
+        {
+            //ui->customPlot->graph(8)->removeFromLegend();
+            //ui->customPlot->graph(9)->removeFromLegend();
+            //ui->customPlot->graph(10)->removeFromLegend();
+            ui->customPlot->graph(11)->removeFromLegend();
+            ui->customPlot->graph(12)->removeFromLegend();
+        }
+        else
+        {
+            //ui->customPlot->graph(8)->addToLegend();
+            //ui->customPlot->graph(9)->addToLegend();
+            //ui->customPlot->graph(10)->addToLegend();
+            ui->customPlot->graph(11)->addToLegend();
+            ui->customPlot->graph(12)->addToLegend();
+        }
+        // profile 3
+
+        ui->customPlot->graph(13)->setVisible(false);
+        ui->customPlot->graph(14)->setVisible(false);
+        ui->customPlot->graph(15)->setVisible(false);
+        ui->customPlot->graph(16)->setVisible(p3);
+        ui->customPlot->graph(17)->setVisible(p3);
+        ui->customPlot->graph(13)->removeFromLegend();
+        ui->customPlot->graph(14)->removeFromLegend();
+        ui->customPlot->graph(15)->removeFromLegend();
+        //ui->customPlot->graph(16)->removeFromLegend();
+        if(p3!=true)
+        {
+            //ui->customPlot->graph(13)->removeFromLegend();
+            //ui->customPlot->graph(14)->removeFromLegend();
+            //ui->customPlot->graph(15)->removeFromLegend();
+            ui->customPlot->graph(16)->removeFromLegend();
+            ui->customPlot->graph(17)->removeFromLegend();
+        }
+        else
+        {
+            //ui->customPlot->graph(13)->addToLegend();
+            //ui->customPlot->graph(14)->addToLegend();
+            //ui->customPlot->graph(15)->addToLegend();
+            ui->customPlot->graph(16)->addToLegend();
+            ui->customPlot->graph(17)->addToLegend();
+        }
+        // profile 4
+
+        ui->customPlot->graph(18)->setVisible(false);
+        ui->customPlot->graph(19)->setVisible(false);
+        ui->customPlot->graph(20)->setVisible(false);
+        ui->customPlot->graph(21)->setVisible(p4);
+        ui->customPlot->graph(22)->setVisible(p4);
+        ui->customPlot->graph(18)->removeFromLegend();
+        ui->customPlot->graph(19)->removeFromLegend();
+        ui->customPlot->graph(20)->removeFromLegend();
+        //ui->customPlot->graph(21)->removeFromLegend();
+        if(p4!=true)
+        {
+            //ui->customPlot->graph(18)->removeFromLegend();
+            //ui->customPlot->graph(19)->removeFromLegend();
+            //ui->customPlot->graph(20)->removeFromLegend();
+            ui->customPlot->graph(21)->removeFromLegend();
+            ui->customPlot->graph(22)->removeFromLegend();
+        }
+        else
+        {
+            //ui->customPlot->graph(18)->addToLegend();
+            //ui->customPlot->graph(19)->addToLegend();
+            //ui->customPlot->graph(20)->addToLegend();
+            ui->customPlot->graph(21)->addToLegend();
+            ui->customPlot->graph(22)->addToLegend();
+        }
+
+
+
+
+
+
+
+        break;}
+
+
     }
-    else
-    {
 
-        ui->customPlot->graph(3)->addToLegend();
-        ui->customPlot->graph(4)->addToLegend();
-        ui->customPlot->graph(5)->addToLegend();
-        ui->customPlot->graph(6)->addToLegend();
-        ui->customPlot->graph(7)->addToLegend();
+    ui->customPlot->graph(3)->rescaleValueAxis(true);
+    ui->customPlot->graph(4)->rescaleValueAxis(true);
+    ui->customPlot->graph(5)->rescaleValueAxis(true);
+    ui->customPlot->graph(6)->rescaleValueAxis(true);
+    ui->customPlot->graph(7)->rescaleValueAxis(true);
+    ui->customPlot->graph(8)->rescaleValueAxis(true);
+    ui->customPlot->graph(9)->rescaleValueAxis(true);
+    ui->customPlot->graph(10)->rescaleValueAxis(true);
+    ui->customPlot->graph(11)->rescaleValueAxis(true);
+    ui->customPlot->graph(12)->rescaleValueAxis(true);
+    ui->customPlot->graph(13)->rescaleValueAxis(true);
+    ui->customPlot->graph(14)->rescaleValueAxis(true);
+    ui->customPlot->graph(15)->rescaleValueAxis(true);
+    ui->customPlot->graph(16)->rescaleValueAxis(true);
+    ui->customPlot->graph(17)->rescaleValueAxis(true);
+    ui->customPlot->graph(18)->rescaleValueAxis(true);
+    ui->customPlot->graph(19)->rescaleValueAxis(true);
+    ui->customPlot->graph(20)->rescaleValueAxis(true);
+    ui->customPlot->graph(21)->rescaleValueAxis(true);
+    ui->customPlot->graph(22)->rescaleValueAxis(true);
+}
+
+void MainWindow::on_p1CheckBox_toggled(bool checked)
+{
 
 
-    }
+    p1 = checked;
+    on_chartviewtype_activated(chartindex);
 
 }
 
 void MainWindow::on_p2CheckBox_toggled(bool checked)
 {
-    ui->customPlot->graph(8)->setVisible(checked);
-    ui->customPlot->graph(9)->setVisible(checked);
-    ui->customPlot->graph(10)->setVisible(checked);
-    ui->customPlot->graph(11)->setVisible(checked);
-    ui->customPlot->graph(12)->setVisible(checked);
-    if(checked!=true)
+    p2 = checked;
+    on_chartviewtype_activated(chartindex);
+}
 
+void MainWindow::on_p3CheckBox_toggled(bool checked)
+{
+    qDebug()<<checked;
+    p3 = checked;
+    on_chartviewtype_activated(chartindex);
+}
+
+void MainWindow::on_p4CheckBox_toggled(bool checked)
+{
+
+    p4 = checked;
+    on_chartviewtype_activated(chartindex);
+}
+
+
+void MainWindow::on_tabWidget_currentChanged(int index)
+{
+    switch(index)
+    { case 0:
     {
+        ui->customPlot->graph(0)->addToLegend();
+        ui->customPlot->graph(1)->addToLegend();
+        ui->customPlot->graph(2)->addToLegend();
+        ui->customPlot->xAxis->setVisible(true);
+        ui->customPlot->axisRect()->axis(QCPAxis::atBottom,1)->setVisible(false);
+        ui->customPlot->yAxis->setVisible(true);
+        ui->customPlot->axisRect()->axis(QCPAxis::atLeft,1)->setVisible(true);
+        ui->customPlot->yAxis2->setVisible(true);
+
+
+
+        ui->customPlot->graph(3)->removeFromLegend();
+        ui->customPlot->graph(4)->removeFromLegend();
+        ui->customPlot->graph(5)->removeFromLegend();
+        ui->customPlot->graph(6)->removeFromLegend();
+        ui->customPlot->graph(7)->removeFromLegend();
         ui->customPlot->graph(8)->removeFromLegend();
         ui->customPlot->graph(9)->removeFromLegend();
         ui->customPlot->graph(10)->removeFromLegend();
         ui->customPlot->graph(11)->removeFromLegend();
         ui->customPlot->graph(12)->removeFromLegend();
-    }
-    else
-    {
-        ui->customPlot->graph(8)->addToLegend();
-        ui->customPlot->graph(9)->addToLegend();
-        ui->customPlot->graph(10)->addToLegend();
-        ui->customPlot->graph(11)->addToLegend();
-        ui->customPlot->graph(12)->addToLegend();
-
-    }
-}
-
-void MainWindow::on_p3CheckBox_toggled(bool checked)
-{
-    ui->customPlot->graph(13)->setVisible(checked);
-    ui->customPlot->graph(14)->setVisible(checked);
-    ui->customPlot->graph(15)->setVisible(checked);
-    ui->customPlot->graph(16)->setVisible(checked);
-    ui->customPlot->graph(17)->setVisible(checked);
-    if(checked!=true)
-
-    {
         ui->customPlot->graph(13)->removeFromLegend();
         ui->customPlot->graph(14)->removeFromLegend();
         ui->customPlot->graph(15)->removeFromLegend();
         ui->customPlot->graph(16)->removeFromLegend();
         ui->customPlot->graph(17)->removeFromLegend();
-    }
-    else
-    {
-        ui->customPlot->graph(13)->addToLegend();
-        ui->customPlot->graph(14)->addToLegend();
-        ui->customPlot->graph(15)->addToLegend();
-        ui->customPlot->graph(16)->addToLegend();
-        ui->customPlot->graph(17)->addToLegend();
-
-    }
-}
-
-void MainWindow::on_p4CheckBox_toggled(bool checked)
-{
-    ui->customPlot->graph(18)->setVisible(checked);
-    ui->customPlot->graph(19)->setVisible(checked);
-    ui->customPlot->graph(20)->setVisible(checked);
-    ui->customPlot->graph(21)->setVisible(checked);
-    ui->customPlot->graph(22)->setVisible(checked);
-    if(checked!=true)
-
-    {
         ui->customPlot->graph(18)->removeFromLegend();
         ui->customPlot->graph(19)->removeFromLegend();
         ui->customPlot->graph(20)->removeFromLegend();
         ui->customPlot->graph(21)->removeFromLegend();
         ui->customPlot->graph(22)->removeFromLegend();
-    }
-    else
-    {
-        ui->customPlot->graph(18)->addToLegend();
-        ui->customPlot->graph(19)->addToLegend();
-        ui->customPlot->graph(20)->addToLegend();
-        ui->customPlot->graph(21)->addToLegend();
-        ui->customPlot->graph(22)->addToLegend();
+        on_p1CheckBox_toggled(false);
+        on_p2CheckBox_toggled(false);
+        on_p3CheckBox_toggled(false);
+        on_p4CheckBox_toggled(false);
+        on_chartviewtype_activated(chartindex);
 
+        ui->customPlot->replot();
+        ui->customPlot->repaint();
+        ui->p1CheckBox->setChecked(false);
+        ui->p2CheckBox->setChecked(false);
+        ui->p3CheckBox->setChecked(false);
+        ui->p4CheckBox->setChecked(false);
+        break;
+
+
+
+    }
+
+    case 1:
+    {    ui->customPlot->graph(0)->removeFromLegend();
+        ui->customPlot->graph(1)->removeFromLegend();
+        ui->customPlot->graph(2)->removeFromLegend();
+        ui->customPlot->replot();
+        ui->customPlot->repaint();
+        break;}
+
+
+
+    }}
+
+
+
+//##################################################################### saving file #######################################################
+void MainWindow::on_saveAs_clicked()
+{
+     QString outputDir = "/home/pi/Desktop";
+
+if (p1_time.isEmpty()!=true &&p1!=false && p2!= true  && p3!=true && p4!= true)
+{
+    QString filter("CSV files(*.csv);;All Files(*.*)");
+    QString defaultFilter("CSV files (*.csv)");
+    QString filename = QFileDialog::getSaveFileName(0, "Save File",outputDir,filter, &defaultFilter);
+    QFile file(filename+".csv");
+    qDebug()<<filename;
+    if(file.open(QIODevice::WriteOnly))
+    {QTextStream stream(&file);
+        stream<<"Time"<<","<<"RPM"<<","<<"Power"<<","<<"Torque"<<Qt::endl;
+        for(int c=0; c< p1_time.size(); c++)
+            stream<<p1_time[c]<<","<<p1_rpm[c]<<","<<p1_pwr[c]<<","<<p1_trq[c]<<Qt::endl;
     }
 }
+else if(p2_time.isEmpty()!=true && p1!=true && p2!= false  && p3!=true && p4!= true)
+{
 
+    QString filter("CSV files(*.csv);;All Files(*.*)");
+    QString defaultFilter("CSV files (*.csv)");
+    QString filename = QFileDialog::getSaveFileName(0, "Save File",outputDir,filter, &defaultFilter);
+    QFile file(filename+".csv");
+    qDebug()<<filename;
+    if(file.open(QIODevice::WriteOnly))
+    {QTextStream stream(&file);
+        stream<<"Time"<<","<<"RPM"<<","<<"Power"<<","<<"Torque"<<Qt::endl;
+        for(int c=0; c< p2_time.size(); c++)
+            stream<<p2_time[c]<<","<<p2_rpm[c]<<","<<p2_pwr[c]<<","<<p2_trq[c]<<Qt::endl;
+
+}
+
+}
+    else if(p3_time.isEmpty()!=true && p1!=true && p2!= true  && p3!=false && p4!= true)
+    {
+
+        QString filter("CSV files(*.csv);;All Files(*.*)");
+        QString defaultFilter("CSV files (*.csv)");
+        QString filename = QFileDialog::getSaveFileName(0, "Save File", outputDir,filter, &defaultFilter);
+        QFile file(filename+".csv");
+        qDebug()<<filename;
+        if(file.open(QIODevice::WriteOnly))
+        {QTextStream stream(&file);
+            stream<<"Time"<<","<<"RPM"<<","<<"Power"<<","<<"Torque"<<Qt::endl;
+            for(int c=0; c< p3_time.size(); c++)
+                stream<<p3_time[c]<<","<<p3_rpm[c]<<","<<p3_pwr[c]<<","<<p3_trq[c]<<Qt::endl;
+}
+
+
+    }
+
+        else if(p4_time.isEmpty()!=true && p1!=true && p2!= true  && p3!=true && p4!= false)
+        {
+
+            QString filter("CSV files(*.csv);;All Files(*.*)");
+            QString defaultFilter("CSV files (*.csv)");
+            QString filename = QFileDialog::getSaveFileName(0, "Save File", outputDir,filter, &defaultFilter);
+            QFile file(filename+".csv");
+            qDebug()<<filename;
+            if(file.open(QIODevice::WriteOnly))
+            {QTextStream stream(&file);
+                stream<<"Time"<<","<<"RPM"<<","<<"Power"<<","<<"Torque"<<Qt::endl;
+                for(int c=0; c< p4_time.size(); c++)
+                    stream<<p4_time[c]<<","<<p4_rpm[c]<<","<<p4_pwr[c]<<","<<p4_trq[c]<<Qt::endl;
+
+
+}
+        }
+        else{
+                QMessageBox msgBox3;
+                msgBox3.setWindowTitle("Multiple profiles selected");
+                msgBox3.setText("Select only one profile to save or \n selected profile has no data ");
+                msgBox3.setStandardButtons(QMessageBox::Ok);
+                msgBox3.addButton(QMessageBox::No);
+                msgBox3.exec();
+            }
+
+
+
+
+}
+//------------------_##########################  save chart image #########################------------------
+void MainWindow::on_saveImage_clicked()
+{
+
+    QString filter("jpg files(*.jpg);;All Files(*.*)");
+    QString defaultFilter("JPG files (*.jpg)");
+
+    QString outputDir = "/home/pi/Desktop";
+    QString filename2 = QFileDialog::getSaveFileName(0, "Save File",outputDir,filter, &defaultFilter);
+
+    QFile file(filename2+".jpg");
+    // QString filename2 = "Graph.jpg";
+    if(!file.open(QIODevice::WriteOnly|QFile::WriteOnly))
+    {qDebug()<<"Cannot open";}
+    ui->customPlot->saveJpg(filename2+".jpg", 0,0,1.0,-1);
+
+}

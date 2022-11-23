@@ -664,7 +664,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="pushButton_7">
+          <widget class="QPushButton" name="saveAs">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
              <horstretch>0</horstretch>
@@ -679,7 +679,20 @@
             </font>
            </property>
            <property name="text">
-            <string>Save As</string>
+            <string>save csv</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="saveImage">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="text">
+            <string>save image</string>
            </property>
           </widget>
          </item>
@@ -705,7 +718,7 @@
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_7">
          <item>
-          <widget class="QPushButton" name="pushButton_8">
+          <widget class="QPushButton" name="openCSV">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
              <horstretch>0</horstretch>
@@ -749,7 +762,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="pushButton_9">
+          <widget class="QPushButton" name="copyToProfile">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
              <horstretch>0</horstretch>
@@ -799,6 +812,13 @@
                <verstretch>0</verstretch>
               </sizepolicy>
              </property>
+             <property name="font">
+              <font>
+               <pointsize>12</pointsize>
+               <weight>50</weight>
+               <bold>false</bold>
+              </font>
+             </property>
              <property name="layoutDirection">
               <enum>Qt::LeftToRight</enum>
              </property>
@@ -814,6 +834,21 @@
              </item>
              <item>
               <property name="text">
+               <string>Power vs Time</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>Torque vs Time</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>RPM vs Time</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
                <string>Power vs RPM</string>
               </property>
              </item>
@@ -825,11 +860,6 @@
              <item>
               <property name="text">
                <string>Power, Torque vs RPM</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>RPM vs Time</string>
               </property>
              </item>
             </widget>
