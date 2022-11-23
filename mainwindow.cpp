@@ -9,6 +9,7 @@
 #include <wiringPi.h>
 #include <QTime>
 #include <QProgressDialog>
+#include <QFileDialog>
 
 
 
@@ -20,14 +21,6 @@ int rpm1;
 unsigned char buffer[4]{0};
 int chartindex;
 bool p1,p2,p3,p4;
-
-
-
-
-
-
-
-
 
 QCPTextElement *title ;
 MainWindow::MainWindow(QWidget *parent)
@@ -338,7 +331,7 @@ void MainWindow::statusupdate(QString message)
 }
 
 void MainWindow::on_capture_clicked()
-{
+{wiringPiSPISetup(CHANNEL, 5000000);
     if (ok!=false)
     {  qDebug()<<timer.restart();
         lastPointKey = 0;
@@ -524,7 +517,7 @@ void MainWindow::realtimeDataSlot()
 double MainWindow::spi()
 {
 
-    wiringPiSPISetup(CHANNEL, 5000000);
+
     long int ltw = 0;
 
     for(int j= 0; j<4; j++)
@@ -2164,8 +2157,6 @@ void MainWindow::on_p1CheckBox_toggled(bool checked)
 
 void MainWindow::on_p2CheckBox_toggled(bool checked)
 {
-
-
     p2 = checked;
     on_chartviewtype_activated(chartindex);
 }
@@ -2222,18 +2213,18 @@ void MainWindow::on_tabWidget_currentChanged(int index)
         ui->customPlot->graph(21)->removeFromLegend();
         ui->customPlot->graph(22)->removeFromLegend();
         on_p1CheckBox_toggled(false);
-                on_p2CheckBox_toggled(false);
-                on_p3CheckBox_toggled(false);
-                on_p4CheckBox_toggled(false);
-                on_chartviewtype_activated(chartindex);
+        on_p2CheckBox_toggled(false);
+        on_p3CheckBox_toggled(false);
+        on_p4CheckBox_toggled(false);
+        on_chartviewtype_activated(chartindex);
 
         ui->customPlot->replot();
         ui->customPlot->repaint();
-
-
-
-
-        break;
+        ui->p1CheckBox->setChecked(false);
+        ui->p2CheckBox->setChecked(false);
+        ui->p3CheckBox->setChecked(false);
+        ui->p4CheckBox->setChecked(false);
+             break;
 
 
 
@@ -2250,3 +2241,33 @@ void MainWindow::on_tabWidget_currentChanged(int index)
 
 
     }}
+
+
+
+//##################################################################### saving file #######################################################
+void MainWindow::on_saveAs_clicked()
+{    QString filter("CSV files(*.csv);;All Files(*.*)");
+     QString defaultFilter("CSV files (*.csv)");
+      QString filename = QFileDialog::getSaveFileName(0, "Save File", QCoreApplication::applicationDirPath(),filter, &defaultFilter);
+       QFile file(filename);
+
+
+        qDebug()<<filename;
+         if(file.open(QIODevice::WriteOnly))
+         {QTextStream stream(&file);
+             stream<<"Time"<<","<<"RPM"<<","<<"Power"<<","<<"Torque"<<Qt::endl;
+             for(int c=0; c< p1_time.size(); c++)
+
+                 stream<<p1_time[c]<<","<<p1_rpm[c]<<","<<p1_pwr[c]<<","<<p1_trq[c]<<Qt::endl;
+         }
+         QString outputDir = "/home/pi/Desktop";
+          QString filename2 = "Graph.jpg";
+           if(!file.open(QIODevice::WriteOnly|QFile::WriteOnly))
+           {qDebug()<<"Cannot open";}
+           ui->customPlot->saveJpg(outputDir+"/"+filename2,0,0,1.0,-1);
+
+
+
+
+
+}
