@@ -10,6 +10,8 @@
 #include <QTime>
 #include <QProgressDialog>
 #include <QFileDialog>
+#include <QString>
+
 
 
 
@@ -28,6 +30,7 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+    wiringPiSPISetup(CHANNEL, 5000000);
     //############## title #####################
     ui->customPlot->plotLayout()->insertRow(0);
     title = new QCPTextElement(ui->customPlot,"Power,Torque,RPM vs Time");
@@ -331,7 +334,7 @@ void MainWindow::statusupdate(QString message)
 }
 
 void MainWindow::on_capture_clicked()
-{wiringPiSPISetup(CHANNEL, 5000000);
+{
     if (ok!=false)
     {  qDebug()<<timer.restart();
         lastPointKey = 0;
@@ -354,6 +357,13 @@ void MainWindow::on_capture_clicked()
 void MainWindow::on_stopCapture_clicked()
 {
     dataTimer.stop();
+    QMessageBox msgBox3;
+    msgBox3.setWindowTitle("Information");
+    msgBox3.setText("Data Captured in temp memory \n save it to a profile");
+    // msgBox.addButton(QMessageBox::Yes);
+    msgBox3.setStandardButtons(QMessageBox::Ok);
+    msgBox3.exec();
+
 
 
 }
@@ -462,33 +472,21 @@ void MainWindow::realtimeDataSlot()
         double rpm= 0;
         double torq= 0;
         double power = 0;
-
         rpm = spi();
         torq=torque(0.05,rpm);
         power = powercal(torq,rpm);
 
-
-        if(key > 15)
-
-            ui->customPlot->graph(1)->addData(key, rpm);
-
+        ui->customPlot->graph(1)->addData(key, rpm);
         ui->customPlot->graph(0)->addData(key, torq);
         ui->customPlot->graph(2)->addData(key,power);
-
-
         // add data to lines:
         // ui->customPlot->graph(1)->addData(key, rpm);
         //ui->customPlot->graph(0)->addData(key, torq);
         //ui->customPlot->graph(2)->addData(key,power);
         max(rpm,torq,power);
-
-
-
-
         ui->rpm->display(rpm);
         ui->torque->display(torq);
         ui->power->display(power);
-
         // rescale value (vertical) axis to fit the current data:
         ui->customPlot->graph(0)->rescaleValueAxis();
         ui->customPlot->graph(2)->rescaleValueAxis(true);
@@ -499,18 +497,11 @@ void MainWindow::realtimeDataSlot()
         qpwr.append(power);
         qtrq.append(torq);
 
-
-
-
-
     }
-
-
 
     // make key axis range scroll with the data (at a constant range size of 8):
     ui->customPlot->xAxis->setRange(0, lastPointKey+8, Qt::AlignLeading);
     ui->customPlot->replot();
-
     // calculate frames per second:
     static double lastFpsKey;
     static int frameCount;
@@ -607,9 +598,6 @@ void MainWindow::max(double arpm, double atrq, double apwr)
 
 void MainWindow::on_clear_plot_capture_clicked()
 {
-
-
-
     ui->customPlot->graph(0)->data()->clear();
     ui->customPlot->graph(1)->data()->clear();
     ui->customPlot->graph(2)->data()->clear();
@@ -698,11 +686,6 @@ void MainWindow::on_savetoprofile_r_clicked()
                     ui->customPlot->graph(5)->rescaleValueAxis(true);
                     ui->customPlot->graph(6)->rescaleValueAxis(true);
                     ui->customPlot->graph(7)->rescaleValueAxis(true);
-
-
-
-
-
                 }
                 ui->progressBar->setVisible(false);
 
@@ -2205,6 +2188,7 @@ void MainWindow::on_tabWidget_currentChanged(int index)
         ui->p2CheckBox->setChecked(false);
         ui->p3CheckBox->setChecked(false);
         ui->p4CheckBox->setChecked(false);
+        ui->combo_p->setCurrentIndex(p_index);
         break;
 
 
@@ -2217,7 +2201,11 @@ void MainWindow::on_tabWidget_currentChanged(int index)
         ui->customPlot->graph(2)->removeFromLegend();
         ui->customPlot->replot();
         ui->customPlot->repaint();
-        break;}
+       ui->copyProfileCombo->setCurrentIndex(p_index);
+        break;
+
+
+    }
 
 
 
@@ -2228,39 +2216,39 @@ void MainWindow::on_tabWidget_currentChanged(int index)
 //##################################################################### saving file #######################################################
 void MainWindow::on_saveAs_clicked()
 {
-     QString outputDir = "/home/pi/Desktop";
+    QString outputDir = "/home/pi/Desktop";
 
-if (p1_time.isEmpty()!=true &&p1!=false && p2!= true  && p3!=true && p4!= true)
-{
-    QString filter("CSV files(*.csv);;All Files(*.*)");
-    QString defaultFilter("CSV files (*.csv)");
-    QString filename = QFileDialog::getSaveFileName(0, "Save File",outputDir,filter, &defaultFilter);
-    QFile file(filename+".csv");
-    qDebug()<<filename;
-    if(file.open(QIODevice::WriteOnly))
-    {QTextStream stream(&file);
-        stream<<"Time"<<","<<"RPM"<<","<<"Power"<<","<<"Torque"<<Qt::endl;
-        for(int c=0; c< p1_time.size(); c++)
-            stream<<p1_time[c]<<","<<p1_rpm[c]<<","<<p1_pwr[c]<<","<<p1_trq[c]<<Qt::endl;
+    if (p1_time.isEmpty()!=true &&p1!=false && p2!= true  && p3!=true && p4!= true)
+    {
+        QString filter("CSV files(*.csv);;All Files(*.*)");
+        QString defaultFilter("CSV files (*.csv)");
+        QString filename = QFileDialog::getSaveFileName(0, "Save File",outputDir,filter, &defaultFilter);
+        QFile file(filename+".csv");
+        qDebug()<<filename;
+        if(file.open(QIODevice::WriteOnly))
+        {QTextStream stream(&file);
+            stream<<"Time"<<","<<"RPM"<<","<<"Power"<<","<<"Torque"<<Qt::endl;
+            for(int c=0; c< p1_time.size(); c++)
+                stream<<p1_time[c]<<","<<p1_rpm[c]<<","<<p1_pwr[c]<<","<<p1_trq[c]<<Qt::endl;
+        }
     }
-}
-else if(p2_time.isEmpty()!=true && p1!=true && p2!= false  && p3!=true && p4!= true)
-{
+    else if(p2_time.isEmpty()!=true && p1!=true && p2!= false  && p3!=true && p4!= true)
+    {
 
-    QString filter("CSV files(*.csv);;All Files(*.*)");
-    QString defaultFilter("CSV files (*.csv)");
-    QString filename = QFileDialog::getSaveFileName(0, "Save File",outputDir,filter, &defaultFilter);
-    QFile file(filename+".csv");
-    qDebug()<<filename;
-    if(file.open(QIODevice::WriteOnly))
-    {QTextStream stream(&file);
-        stream<<"Time"<<","<<"RPM"<<","<<"Power"<<","<<"Torque"<<Qt::endl;
-        for(int c=0; c< p2_time.size(); c++)
-            stream<<p2_time[c]<<","<<p2_rpm[c]<<","<<p2_pwr[c]<<","<<p2_trq[c]<<Qt::endl;
+        QString filter("CSV files(*.csv);;All Files(*.*)");
+        QString defaultFilter("CSV files (*.csv)");
+        QString filename = QFileDialog::getSaveFileName(0, "Save File",outputDir,filter, &defaultFilter);
+        QFile file(filename+".csv");
+        qDebug()<<filename;
+        if(file.open(QIODevice::WriteOnly))
+        {QTextStream stream(&file);
+            stream<<"Time"<<","<<"RPM"<<","<<"Power"<<","<<"Torque"<<Qt::endl;
+            for(int c=0; c< p2_time.size(); c++)
+                stream<<p2_time[c]<<","<<p2_rpm[c]<<","<<p2_pwr[c]<<","<<p2_trq[c]<<Qt::endl;
 
-}
+        }
 
-}
+    }
     else if(p3_time.isEmpty()!=true && p1!=true && p2!= true  && p3!=false && p4!= true)
     {
 
@@ -2274,36 +2262,36 @@ else if(p2_time.isEmpty()!=true && p1!=true && p2!= false  && p3!=true && p4!= t
             stream<<"Time"<<","<<"RPM"<<","<<"Power"<<","<<"Torque"<<Qt::endl;
             for(int c=0; c< p3_time.size(); c++)
                 stream<<p3_time[c]<<","<<p3_rpm[c]<<","<<p3_pwr[c]<<","<<p3_trq[c]<<Qt::endl;
-}
+        }
 
 
     }
 
-        else if(p4_time.isEmpty()!=true && p1!=true && p2!= true  && p3!=true && p4!= false)
-        {
+    else if(p4_time.isEmpty()!=true && p1!=true && p2!= true  && p3!=true && p4!= false)
+    {
 
-            QString filter("CSV files(*.csv);;All Files(*.*)");
-            QString defaultFilter("CSV files (*.csv)");
-            QString filename = QFileDialog::getSaveFileName(0, "Save File", outputDir,filter, &defaultFilter);
-            QFile file(filename+".csv");
-            qDebug()<<filename;
-            if(file.open(QIODevice::WriteOnly))
-            {QTextStream stream(&file);
-                stream<<"Time"<<","<<"RPM"<<","<<"Power"<<","<<"Torque"<<Qt::endl;
-                for(int c=0; c< p4_time.size(); c++)
-                    stream<<p4_time[c]<<","<<p4_rpm[c]<<","<<p4_pwr[c]<<","<<p4_trq[c]<<Qt::endl;
+        QString filter("CSV files(*.csv);;All Files(*.*)");
+        QString defaultFilter("CSV files (*.csv)");
+        QString filename = QFileDialog::getSaveFileName(0, "Save File", outputDir,filter, &defaultFilter);
+        QFile file(filename+".csv");
+        qDebug()<<filename;
+        if(file.open(QIODevice::WriteOnly))
+        {QTextStream stream(&file);
+            stream<<"Time"<<","<<"RPM"<<","<<"Power"<<","<<"Torque"<<Qt::endl;
+            for(int c=0; c< p4_time.size(); c++)
+                stream<<p4_time[c]<<","<<p4_rpm[c]<<","<<p4_pwr[c]<<","<<p4_trq[c]<<Qt::endl;
 
 
-}
         }
-        else{
-                QMessageBox msgBox3;
-                msgBox3.setWindowTitle("Multiple profiles selected");
-                msgBox3.setText("Select only one profile to save or \n selected profile has no data ");
-                msgBox3.setStandardButtons(QMessageBox::Ok);
-                msgBox3.addButton(QMessageBox::No);
-                msgBox3.exec();
-            }
+    }
+    else{
+        QMessageBox msgBox3;
+        msgBox3.setWindowTitle("Multiple profiles selected");
+        msgBox3.setText("Select only one profile to save or \n selected profile has no data ");
+        msgBox3.setStandardButtons(QMessageBox::Ok);
+        msgBox3.addButton(QMessageBox::No);
+        msgBox3.exec();
+    }
 
 
 
@@ -2324,5 +2312,174 @@ void MainWindow::on_saveImage_clicked()
     if(!file.open(QIODevice::WriteOnly|QFile::WriteOnly))
     {qDebug()<<"Cannot open";}
     ui->customPlot->saveJpg(filename2+".jpg", 0,0,1.0,-1);
+
+}
+
+void MainWindow::on_copyProfileCombo_activated(int index)
+{
+
+    p_index =index;
+
+
+    switch(index)
+    {case 0:
+        statusupdate("profile 1");
+        if(p1_rpm.isEmpty()!=true)
+        { ui->copyProfileStatus->setText("Has data");
+            ui->copyProfileStatus->setStyleSheet("background-color: rgb(255,0,0)");
+        }
+        else
+        {       ui->copyProfileStatus->setText("Empty");
+            ui->sframe->setStyleSheet("background-color: rgb(0,255,0)");
+        }
+
+        p_index = 0;
+
+        break;
+    case 1:
+        statusupdate("profile 2");
+        if(p2_rpm.isEmpty()!=true)
+        {  ui->copyProfileStatus->setText("Has data");
+            ui->copyProfileStatus->setStyleSheet("background-color: rgb(255,0,0)");}
+        else
+        {   ui->copyProfileStatus->setText("Empty");
+            ui->copyProfileStatus->setStyleSheet("background-color: rgb(0,255,0)");}
+
+        p_index = 1;
+
+        break;
+    case 2:
+        statusupdate("profile 3");
+        if(p3_rpm.isEmpty()!=true)
+        {   ui->copyProfileStatus->setText("Has data");
+            ui->copyProfileStatus->setStyleSheet("background-color: rgb(255,0,0)");}
+        else
+        {  ui->copyProfileStatus->setText("Empty");
+            ui->copyProfileStatus->setStyleSheet("background-color: rgb(0,255,0)");}
+
+        p_index = 2;
+        break;
+    case 3:
+        statusupdate("profile 4");
+        if(p4_rpm.isEmpty()!=true)
+        {    ui->copyProfileStatus->setText("Has data");
+            ui->copyProfileStatus->setStyleSheet("background-color: rgb(255,0,0)");}
+        else
+        {  ui->copyProfileStatus->setText("Empty");
+            ui->copyProfileStatus->setStyleSheet("background-color: rgb(0,255,0)");}
+
+        p_index = 3;
+        break;
+    }
+
+
+
+
+
+}
+
+void MainWindow::on_openCSV_clicked()
+{
+    QString outputDir = "/home/pi/Desktop";
+    QStringList firstColumn;
+    QString filter("CSV files(*.csv);;All Files(*.*)");
+    QString defaultFilter("CSV files (*.csv)");
+    QString filename = QFileDialog::getOpenFileName(0, "Open File",outputDir,filter, &defaultFilter);
+    QFile file(filename);
+    qDebug()<<filename;
+    if(file.open(QIODevice::ReadOnly |QIODevice::Text))
+    {
+        QTextStream stream(&file);
+        QString s = file.readLine();
+        QString line;
+
+        while(!file.atEnd())
+        {
+            s = file.readLine();
+            QStringList tokens = s.split(",");
+            qDebug()<<tokens.at(0).toFloat();
+            qtime.append(tokens.at(0).toFloat());
+            qDebug()<<tokens.at(1).toFloat();
+            qrpm.append(tokens.at(1).toFloat());
+            qpwr.append(tokens.at(2).toFloat());
+            qtrq.append(tokens.at(3).toFloat());
+
+        }
+        statusupdate("data loaded to temp profile");
+
+
+    }else
+        qDebug()<<" Unable to open";
+
+
+
+}
+
+void MainWindow::on_copyToProfile_clicked()
+{
+    on_savetoprofile_r_clicked();
+    on_copyProfileCombo_activated(p_index);
+}
+
+void MainWindow::on_clearplotcompare_clicked()
+{
+
+
+    p1 = false;
+    p2 = false;
+    p3=false;
+    p4=false;
+    on_chartviewtype_activated(chartindex);
+    ui->customPlot->replot();
+    ui->customPlot->repaint();
+
+
+}
+
+void MainWindow::on_clearAllProfile_clicked()
+{
+    QMessageBox msgBox2;
+    msgBox2.setWindowTitle("Information");
+    msgBox2.setText("Are you sure you want to delete all profile  ");
+
+
+
+    msgBox2.setStandardButtons(QMessageBox::Yes);
+     msgBox2.addButton(QMessageBox::No);
+
+
+    if (msgBox2.exec()==QMessageBox::Yes)
+    {   p1_rpm.clear();
+        p1_time.clear();
+        p1_trq.clear();
+        p1_pwr.clear();
+        statusupdate("profile 1 data has been cleared");
+
+
+        p2_rpm.clear();
+        p2_time.clear();
+        p2_trq.clear();
+        p2_pwr.clear();
+        statusupdate("profile 2 data has been cleared");
+
+
+        p3_rpm.clear();
+        p3_time.clear();
+        p3_trq.clear();
+        p3_pwr.clear();
+
+
+
+
+
+        p4_rpm.clear();
+        p4_time.clear();
+        p4_trq.clear();
+        p4_pwr.clear();
+        statusupdate("profile 4 data has been cleared");
+
+   }
+    else
+        statusupdate("Canceld");
 
 }

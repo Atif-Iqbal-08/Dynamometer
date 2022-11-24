@@ -68,6 +68,16 @@ private slots:
 
     void on_saveImage_clicked();
 
+    void on_copyProfileCombo_activated(int index);
+
+    void on_openCSV_clicked();
+
+    void on_copyToProfile_clicked();
+
+    void on_clearplotcompare_clicked();
+
+    void on_clearAllProfile_clicked();
+
 private:
     Ui::MainWindow *ui;
     float wheeldia =0;
