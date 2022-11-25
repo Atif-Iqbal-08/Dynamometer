@@ -27,6 +27,7 @@ public:
     double spi();
     double powercal(double, double);
     void graphsetup();
+    double avgtrq();double avgpwr();
 public slots:
     void realtimeDataSlot();
 private slots:
@@ -94,6 +95,9 @@ private:
     QVector<double> p2_rpm , p2_trq ,p2_pwr;
     QVector<double> p3_rpm , p3_trq ,p3_pwr;
     QVector<double> p4_rpm , p4_trq ,p4_pwr;
+    int c; //counter
+
+    QVector<double> MATRQ, MAPWR;
 
 
 

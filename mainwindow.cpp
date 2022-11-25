@@ -11,11 +11,12 @@
 #include <QProgressDialog>
 #include <QFileDialog>
 #include <QString>
+#include <numeric>
 
 
 
 
-
+int c1= 0;
 int time_c, i =0;
 static int CHANNEL =0;
 int time0;
@@ -25,12 +26,13 @@ int chartindex;
 bool p1,p2,p3,p4;
 
 QCPTextElement *title ;
+QCPCurve *para1;
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-    wiringPiSPISetup(CHANNEL, 5000000);
+    wiringPiSPISetup(CHANNEL, 500000);
     //############## title #####################
     ui->customPlot->plotLayout()->insertRow(0);
     title = new QCPTextElement(ui->customPlot,"Power,Torque,RPM vs Time");
@@ -115,11 +117,18 @@ MainWindow::MainWindow(QWidget *parent)
 
 
 
+
+
+
+
+
+
+
     ui->customPlot->addGraph(ui->customPlot->xAxis,ui->customPlot->yAxis);
     ui->customPlot->graph(0)->setPen(QPen (Qt::blue));
     ui->customPlot->graph(0)->setName("Torque");
     ui->customPlot->graph(0)->setVisible(true);
-    //ui->customPlot->graph(0)->removeFromLegend();
+    ui->customPlot->graph(0)->removeFromLegend();
 
 
     ui->customPlot->addGraph(ui->customPlot->xAxis,ui->customPlot->yAxis2);
@@ -337,8 +346,9 @@ void MainWindow::on_capture_clicked()
 {
     if (ok!=false)
     {  qDebug()<<timer.restart();
+        c= 0;
         lastPointKey = 0;
-
+c1= 0;
         connect(&dataTimer, SIGNAL(timeout()), this, SLOT(realtimeDataSlot()));
         dataTimer.start(0);}
     else
@@ -363,6 +373,7 @@ void MainWindow::on_stopCapture_clicked()
     // msgBox.addButton(QMessageBox::Yes);
     msgBox3.setStandardButtons(QMessageBox::Ok);
     msgBox3.exec();
+
 
 
 
@@ -460,45 +471,61 @@ void MainWindow::on_combo_p_activated(int index)
 
 //############################################################ data caputing and computing area ######################################
 void MainWindow::realtimeDataSlot()
-{
-
-    // calculate two new data points:
-
-
+{    // calculate two new data points:
     double key = timer.elapsed()/1000.0; // time elapsed since start of demo, in seconds
-
-    if (key-lastPointKey > 0.1) // at most add point every 2 ms
+    if (key-lastPointKey > 0.02) // at most add point every 2 ms
     {
         double rpm= 0;
-        double torq= 0;
-        double power = 0;
-        rpm = spi();
-        torq=torque(0.05,rpm);
-        power = powercal(torq,rpm);
+        //double torq= 0;
+        //double power = 0;
 
-        ui->customPlot->graph(1)->addData(key, rpm);
-        ui->customPlot->graph(0)->addData(key, torq);
-        ui->customPlot->graph(2)->addData(key,power);
-        // add data to lines:
-        // ui->customPlot->graph(1)->addData(key, rpm);
-        //ui->customPlot->graph(0)->addData(key, torq);
-        //ui->customPlot->graph(2)->addData(key,power);
-        max(rpm,torq,power);
-        ui->rpm->display(rpm);
-        ui->torque->display(torq);
-        ui->power->display(power);
-        // rescale value (vertical) axis to fit the current data:
-        ui->customPlot->graph(0)->rescaleValueAxis();
-        ui->customPlot->graph(2)->rescaleValueAxis(true);
-        ui->customPlot->graph(1)->rescaleValueAxis(true);
-        lastPointKey = key;
-        qtime.append(key);
-        qrpm.append(rpm);
-        qpwr.append(power);
-        qtrq.append(torq);
+
+        if (c>19)
+        {
+ rpm = spi();
+            double avg_trq = avgtrq();
+            double avg_pwr = avgpwr();
+            if(c1>99)
+            {
+                ui->customPlot->graph(1)->addData(key, rpm);
+            ui->customPlot->graph(0)->addData(key, avg_trq);
+            ui->customPlot->graph(2)->addData(key,avg_pwr);
+            max(rpm,avg_trq,avg_pwr);
+
+            ui->rpm->display(rpm);
+            ui->torque->display(avg_trq);
+            ui->power->display(avg_pwr);
+            // rescale value (vertical) axis to fit the current data:
+            ui->customPlot->graph(0)->rescaleValueAxis();
+            ui->customPlot->graph(2)->rescaleValueAxis(true);
+            ui->customPlot->graph(1)->rescaleValueAxis(true);
+            lastPointKey = key;
+            qtime.append(key);
+            qrpm.append(rpm);
+            qpwr.append(avg_pwr);
+            qtrq.append(avg_trq);
+            }
+            MATRQ.clear();
+            MAPWR.clear();
+
+            c=0;
+        }
+
+        else
+        {
+                rpm = spi();
+                double t=torque(0.02,rpm);
+                MATRQ.append(t);
+                 MAPWR.append(powercal(t,rpm));
+
+                c++;
+                c1++;
+            }
+
+
+
 
     }
-
     // make key axis range scroll with the data (at a constant range size of 8):
     ui->customPlot->xAxis->setRange(0, lastPointKey+8, Qt::AlignLeading);
     ui->customPlot->replot();
@@ -542,19 +569,17 @@ double MainWindow::spi()
     //qDebug()<<ltw;
     ltw *=10;
     ltw += buffer[2];
-    //qDebug()<<buffer[2];
+   // qDebug()<<buffer[2];
     ltw *=10;
     ltw += buffer[1];
     //qDebug()<<buffer[1];
     ltw *=10;
     ltw += buffer[0];
-    //qDebug()<<buffer[0];
-
+    qDebug()<<buffer[0];
     memset(buffer, 0, 4);
     // qDebug()<< "OG = "<<time;
-
-    //            if(sig) ltw |= 0xf00000000;
-    //             ltw = ltw/16;
+    // if(sig) ltw |= 0xf00000000;
+    // ltw = ltw/16;
     //qDebug()<<ltw;
     return ltw;
 
@@ -565,7 +590,7 @@ double MainWindow::powercal(double t, double r)
     return (t*r)/63025;
 }
 float MainWindow::torque(float a, int trpm)
-{    qDebug()<<a;
+{    //qDebug()<<a;
      float alpha;
       float inertia = 0.71;
        float deltarpm ;
@@ -611,27 +636,29 @@ void MainWindow::on_clear_plot_capture_clicked()
                 QString("%1 FPS, Total Data points: %2")
                 .arg(ui->customPlot->graph(0)->data()->size()+ui->customPlot->graph(1)->data()->size())
                 , 0);
-
-
-    maxrpm = 0 ;
-    maxpwr =0;
-    maxtrq = 0;
-    qtime.clear();
-    qpwr.clear();
-    qtrq.clear();
-    qrpm.clear();
-    ui->maxrpm->display(maxrpm);
-    ui->maxtrq->display(maxtrq);
-    ui->maxpwr->display(maxpwr);
-    ui->rpm->display(0);
-    ui->torque->display(0);
-    ui->power->display(0);
+    maxrpm = 0 ;     maxpwr =0;    maxtrq = 0;
+    qtime.clear();     qpwr.clear();     qtrq.clear();    qrpm.clear();
+    ui->maxrpm->display(maxrpm);     ui->maxtrq->display(maxtrq);    ui->maxpwr->display(maxpwr);
+    ui->rpm->display(0);    ui->torque->display(0);    ui->power->display(0);
+}
 
 
 
 
+double MainWindow::avgtrq()
+{
+ return 1*std::accumulate(MATRQ.begin(),MATRQ.end(), 0LL)/MATRQ.size();
+
+
+    }
+double MainWindow::avgpwr()
+{
+    return 1*std::accumulate(MAPWR.begin(),MAPWR.end(), 0LL)/MAPWR.size();
 
 }
+
+
+
 
 void MainWindow::on_savetoprofile_r_clicked()
 {
@@ -689,8 +716,7 @@ void MainWindow::on_savetoprofile_r_clicked()
                 }
                 ui->progressBar->setVisible(false);
 
-                qDebug()<<qtime.isEmpty();
-                qDebug()<<p1_time;
+
 
                 if (msgBox1.exec()==QMessageBox::Ok)
                     on_clear_plot_capture_clicked();
@@ -727,8 +753,6 @@ void MainWindow::on_savetoprofile_r_clicked()
                     }
                     ui->progressBar->setVisible(false);
 
-                    qDebug()<<qtime.isEmpty();
-                    qDebug()<<p1_time;
 
                     if (msgBox1.exec()==QMessageBox::Ok)
 
@@ -837,7 +861,7 @@ void MainWindow::on_savetoprofile_r_clicked()
                     p3_trq.append(qtrq.at(i));
                     ui->progressBar->setValue(i);
                     ui->customPlot->graph(13)->addData(p3_time,p3_pwr);
-                    ui->customPlot->graph(14)->addData(p2_time,p3_trq);
+                    ui->customPlot->graph(14)->addData(p3_time,p3_trq);
                     ui->customPlot->graph(15)->addData(p3_time,p3_rpm);
                     ui->customPlot->graph(16)->addData(p3_rpm,p3_pwr);
                     ui->customPlot->graph(17)->addData(p3_rpm,p3_trq);
@@ -877,7 +901,7 @@ void MainWindow::on_savetoprofile_r_clicked()
                         ui->progressBar->setValue(i);
 
                         ui->customPlot->graph(13)->addData(p3_time,p3_pwr);
-                        ui->customPlot->graph(14)->addData(p2_time,p3_trq);
+                        ui->customPlot->graph(14)->addData(p3_time,p3_trq);
                         ui->customPlot->graph(15)->addData(p3_time,p3_rpm);
                         ui->customPlot->graph(16)->addData(p3_rpm,p3_pwr);
                         ui->customPlot->graph(17)->addData(p3_rpm,p3_trq);
@@ -2180,15 +2204,18 @@ void MainWindow::on_tabWidget_currentChanged(int index)
         on_p2CheckBox_toggled(false);
         on_p3CheckBox_toggled(false);
         on_p4CheckBox_toggled(false);
-        on_chartviewtype_activated(chartindex);
+       // on_chartviewtype_activated(chartindex);
 
-        ui->customPlot->replot();
-        ui->customPlot->repaint();
+
         ui->p1CheckBox->setChecked(false);
         ui->p2CheckBox->setChecked(false);
         ui->p3CheckBox->setChecked(false);
         ui->p4CheckBox->setChecked(false);
         ui->combo_p->setCurrentIndex(p_index);
+        ui->chartviewtype->setCurrentIndex(0);
+        ui->customPlot->replot();
+        ui->customPlot->repaint();
+
         break;
 
 
@@ -2201,7 +2228,7 @@ void MainWindow::on_tabWidget_currentChanged(int index)
         ui->customPlot->graph(2)->removeFromLegend();
         ui->customPlot->replot();
         ui->customPlot->repaint();
-       ui->copyProfileCombo->setCurrentIndex(p_index);
+        ui->copyProfileCombo->setCurrentIndex(p_index);
         break;
 
 
@@ -2445,7 +2472,7 @@ void MainWindow::on_clearAllProfile_clicked()
 
 
     msgBox2.setStandardButtons(QMessageBox::Yes);
-     msgBox2.addButton(QMessageBox::No);
+    msgBox2.addButton(QMessageBox::No);
 
 
     if (msgBox2.exec()==QMessageBox::Yes)
@@ -2478,7 +2505,43 @@ void MainWindow::on_clearAllProfile_clicked()
         p4_pwr.clear();
         statusupdate("profile 4 data has been cleared");
 
-   }
+
+
+        ui->customPlot->graph(0)->data()->clear();
+        ui->customPlot->graph(1)->data()->clear();
+        ui->customPlot->graph(2)->data()->clear();
+        ui->customPlot->graph(3)->data()->clear();
+        ui->customPlot->graph(4)->data()->clear();
+        ui->customPlot->graph(5)->data()->clear();
+        ui->customPlot->graph(6)->data()->clear();
+        ui->customPlot->graph(7)->data()->clear();
+        ui->customPlot->graph(8)->data()->clear();
+        ui->customPlot->graph(9)->data()->clear();
+        ui->customPlot->graph(10)->data()->clear();
+        ui->customPlot->graph(11)->data()->clear();
+        ui->customPlot->graph(12)->data()->clear();
+        ui->customPlot->graph(13)->data()->clear();
+        ui->customPlot->graph(14)->data()->clear();
+        ui->customPlot->graph(15)->data()->clear();
+        ui->customPlot->graph(16)->data()->clear();
+        ui->customPlot->graph(17)->data()->clear();
+        ui->customPlot->graph(18)->data()->clear();
+        ui->customPlot->graph(19)->data()->clear();
+        ui->customPlot->graph(20)->data()->clear();
+        ui->customPlot->graph(21)->data()->clear();
+        ui->customPlot->graph(22)->data()->clear();
+
+
+
+
+
+
+
+
+
+
+
+    }
     else
         statusupdate("Canceld");
 
