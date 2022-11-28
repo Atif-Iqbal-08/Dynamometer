@@ -12,10 +12,6 @@
 #include <QFileDialog>
 #include <QString>
 #include <numeric>
-
-
-
-
 int c1= 0;
 int time_c, i =0;
 static int CHANNEL =0;
@@ -27,6 +23,9 @@ bool p1,p2,p3,p4;
 
 QCPTextElement *title ;
 QCPCurve *para1;
+
+
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
@@ -54,7 +53,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->customPlot->axisRect()->axis(QCPAxis::atLeft,1)->setTickLabelColor(Qt::black);
     ui->customPlot->axisRect()->axis(QCPAxis::atLeft,1)->setTickPen(QPen (Qt::black));
     ui->customPlot->axisRect()->axis(QCPAxis::atLeft,1)->setBasePen(QPen(Qt::black));
-    ui->customPlot->axisRect()->axis(QCPAxis::atLeft,1)->setRange(0,500);
+    ui->customPlot->axisRect()->axis(QCPAxis::atLeft,1)->setRange(0,100);
     ui->customPlot->axisRect()->axis(QCPAxis::atLeft,1)->setVisible(true); // set to true
     ui->customPlot->axisRect()->axis(QCPAxis::atLeft,1)->grid()->setVisible(true); // set to true
     ui->customPlot->axisRect()->axis(QCPAxis::atLeft,1)->grid()->setPen(QPen(QColor(140, 140, 140), 1, Qt::DotLine));
@@ -71,7 +70,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->customPlot->axisRect()->axis(QCPAxis::atBottom,1)->setTickLabelColor(Qt::black);
     ui->customPlot->axisRect()->axis(QCPAxis::atBottom,1)->setTickPen(QPen (Qt::black));
     ui->customPlot->axisRect()->axis(QCPAxis::atBottom,1)->setBasePen(QPen(Qt::black));
-    ui->customPlot->axisRect()->axis(QCPAxis::atBottom,1)->setRange(0,30000);
+    ui->customPlot->axisRect()->axis(QCPAxis::atBottom,1)->setRange(0,1000);
     ui->customPlot->axisRect()->axis(QCPAxis::atBottom,1)->setVisible(false); // set to true
     ui->customPlot->axisRect()->axis(QCPAxis::atBottom,1)->grid()->setVisible(true); // set to true
     ui->customPlot->axisRect()->axis(QCPAxis::atBottom,1)->grid()->setPen(QPen(QColor(140, 140, 140), 1, Qt::DotLine));
@@ -106,40 +105,41 @@ MainWindow::MainWindow(QWidget *parent)
 
 
 
-    ui->customPlot->yAxis->setRange(0,600);
-    ui->customPlot->yAxis2->setRange(0,15000);
+    ui->customPlot->yAxis->setRange(0,400);
+    ui->customPlot->yAxis2->setRange(0,1000);
     ui->customPlot->yAxis2->setTicks(true);
     ui->customPlot->yAxis2->setTickLabelColor(Qt::black);
     ui->customPlot->yAxis2->setTickLabels(true);
     ui->customPlot->yAxis2->setVisible(true);
     ui->customPlot->legend->setVisible(true);
-    ui->customPlot->legend->setBrush(QColor(255,255,255,150));
+    //ui->customPlot->legend->setBrush(QColor(230,230,230,100));
 
-
-
-
-
-
-
-
-
-
+    QPen pen0;
+    pen0.setWidth(2);
+    pen0.setColor(QColor(0,0,255));
     ui->customPlot->addGraph(ui->customPlot->xAxis,ui->customPlot->yAxis);
-    ui->customPlot->graph(0)->setPen(QPen (Qt::blue));
+    ui->customPlot->graph(0)->setPen(pen0);
     ui->customPlot->graph(0)->setName("Torque");
     ui->customPlot->graph(0)->setVisible(true);
-    ui->customPlot->graph(0)->removeFromLegend();
+    //ui->customPlot->graph(0)->removeFromLegend();
 
-
+    QPen pen1;
+    pen1.setWidth(2);
+    pen1.setColor(QColor(0,255,0));
     ui->customPlot->addGraph(ui->customPlot->xAxis,ui->customPlot->yAxis2);
-    ui->customPlot->graph(1)->setPen(QPen (Qt::red));
+    ui->customPlot->graph(1)->setPen(pen1);
     ui->customPlot->graph(1)->setName("RPM");
     // ui->customPlot->graph(1)->removeFromLegend();
     ui->customPlot->graph(1)->setVisible(true);
 
 
+    QPen pen2;
+    pen2.setWidth(2);
+    pen2.setColor(QColor(255,0,0));
+
     ui->customPlot->addGraph(ui->customPlot->xAxis,ui->customPlot->axisRect()->axis(QCPAxis::atLeft,1));
-    ui->customPlot->graph(2)->setPen(QPen (Qt::green));
+    ui->customPlot->graph(2)->setPen(pen2);
+
     ui->customPlot->graph(2)->setName("Power");
     // ui->customPlot->graph(2)->removeFromLegend();
     ui->customPlot->graph(2)->setVisible(true);
@@ -152,17 +152,11 @@ MainWindow::MainWindow(QWidget *parent)
     on_p2CheckBox_toggled(false);
     on_p3CheckBox_toggled(false);
     on_p4CheckBox_toggled(false);
-
+    ui->tabWidget->setCurrentIndex(0);
     on_chartviewtype_activated(0);
 
 
     ui->customPlot->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom);
-
-
-
-
-
-
 
 }
 
@@ -171,123 +165,168 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-void MainWindow::graphsetup()
+//####################################################################################################################//
+//---------------------------------------------Set diffrent graphs for the plots -------------------------------------//
+//####################################################################################################################//
 
+void MainWindow::graphsetup()
 {
 
 
 
     //##############################--profile 1 setup--##################################////////////////////
     //#########------Power
+    QPen pen3;
+    pen3.setWidth(2);
+    pen3.setColor(QColor(255,0,0));
     ui->customPlot->addGraph(ui->customPlot->xAxis,ui->customPlot->axisRect()->axis(QCPAxis::atLeft,1));
     ui->customPlot->graph(3);
     ui->customPlot->graph(3)->setName("P1 Power");
-    ui->customPlot->graph(3)->setScatterStyle(QCPScatterStyle::ssCross);
-    ui->customPlot->graph(3)->setPen(QPen (Qt::green));
+
+    ui->customPlot->graph(3)->setPen(pen3);
     ui->customPlot->graph(3)->removeFromLegend();
     //#########------Torque
+    QPen pen4;
+    pen4.setWidth(2);
+    pen4.setColor(QColor(0,255,0));
     ui->customPlot->addGraph(ui->customPlot->xAxis,ui->customPlot->yAxis);
     ui->customPlot->graph(4);
     ui->customPlot->graph(4)->setName("P1 Torque");
-    ui->customPlot->graph(4)->setScatterStyle(QCPScatterStyle::ssCross);
-    ui->customPlot->graph(4)->setPen(QPen (Qt::blue));
+
+    ui->customPlot->graph(4)->setPen(pen4);
     ui->customPlot->graph(4)->removeFromLegend();
     //#########------RPM
+    QPen pen5;
+    pen5.setWidth(2);
+    pen5.setColor(QColor(0,0,255));
     ui->customPlot->addGraph(ui->customPlot->xAxis,ui->customPlot->yAxis2);
     ui->customPlot->graph(5);
     ui->customPlot->graph(5)->setName("P1 RPM");
-    ui->customPlot->graph(5)->setScatterStyle(QCPScatterStyle::ssCross);
-    ui->customPlot->graph(5)->setPen(QPen (Qt::red));
+
+    ui->customPlot->graph(5)->setPen(pen5);
     ui->customPlot->graph(5)->removeFromLegend();
     //#########------power vs rpm
+    QPen pen6;
+    pen6.setWidth(2);
+    pen6.setColor(QColor(255,0,0));
     ui->customPlot->addGraph(ui->customPlot->axisRect()->axis(QCPAxis::atBottom,1),ui->customPlot->axisRect()->axis(QCPAxis::atLeft,1));
     ui->customPlot->graph(6);
     ui->customPlot->graph(6)->setName("P1 Power");
-    ui->customPlot->graph(6)->setScatterStyle(QCPScatterStyle::ssCross);
-    ui->customPlot->graph(6)->setPen(QPen (Qt::green));
+
+    ui->customPlot->graph(6)->setPen(pen6);
     ui->customPlot->graph(6)->removeFromLegend();
     //#########------Torque vs rpm
+    QPen pen7;
+    pen7.setWidth(2);
+    pen7.setColor(QColor(0,255,0));
     ui->customPlot->addGraph(ui->customPlot->axisRect()->axis(QCPAxis::atBottom,1),ui->customPlot->yAxis);
     ui->customPlot->graph(7);
     ui->customPlot->graph(7)->setName("P1 Torque");
-    ui->customPlot->graph(7)->setScatterStyle(QCPScatterStyle::ssCross);
-    ui->customPlot->graph(7)->setPen(QPen (Qt::blue));
+
+    ui->customPlot->graph(7)->setPen(pen7);
     ui->customPlot->graph(7)->removeFromLegend();
-
-
-
 
     //##############################--profile 2 setup--##################################////////////////////
     //#########------Power
+    QPen pen8;
+    pen8.setWidth(2);
+    pen8.setColor(QColor(255,165,0));
     ui->customPlot->addGraph(ui->customPlot->xAxis,ui->customPlot->axisRect()->axis(QCPAxis::atLeft,1));
     ui->customPlot->graph(8);
     ui->customPlot->graph(8)->setName("P2 Power");
-    ui->customPlot->graph(8)->setScatterStyle(QCPScatterStyle::ssSquare);
-    ui->customPlot->graph(8)->setPen(QPen (Qt::green));
+
+    ui->customPlot->graph(8)->setPen(pen8);
     //#########------Torque
+    QPen pen9;
+    pen9.setWidth(2);
+    pen9.setColor(QColor(0,128,0));
     ui->customPlot->addGraph(ui->customPlot->xAxis,ui->customPlot->yAxis);
     ui->customPlot->graph(9);
     ui->customPlot->graph(9)->setName("P2 Torque");
-    ui->customPlot->graph(9)->setScatterStyle(QCPScatterStyle::ssSquare);
-    ui->customPlot->graph(9)->setPen(QPen (Qt::blue));
+
+    ui->customPlot->graph(9)->setPen(pen9);
     //#########------RPM
+    QPen pen10;
+    pen10.setWidth(2);
+    pen10.setColor(QColor(127,0,255));
     ui->customPlot->addGraph(ui->customPlot->xAxis,ui->customPlot->yAxis2);
     ui->customPlot->graph(10);
     ui->customPlot->graph(10)->setName("P2 RPM");
-    ui->customPlot->graph(10)->setScatterStyle(QCPScatterStyle::ssSquare);
-    ui->customPlot->graph(10)->setPen(QPen (Qt::red));
+
+    ui->customPlot->graph(10)->setPen(pen10);
+
     //#########------power vs rpm
+    QPen pen11;
+    pen11.setWidth(2);
+    pen11.setColor(QColor(255,165,0));
+
+
     ui->customPlot->addGraph(ui->customPlot->axisRect()->axis(QCPAxis::atBottom,1),ui->customPlot->axisRect()->axis(QCPAxis::atLeft,1));
     ui->customPlot->graph(11);
     ui->customPlot->graph(11)->setName("P2 Power");
-    ui->customPlot->graph(11)->setScatterStyle(QCPScatterStyle::ssSquare);
-    ui->customPlot->graph(11)->setPen(QPen (Qt::green));
+
+    ui->customPlot->graph(11)->setPen(pen11);
     //#########------Torque vs rpm
+    QPen pen12;
+    pen12.setWidth(2);
+    pen12.setColor(QColor(0,128,0));
+
+
     ui->customPlot->addGraph(ui->customPlot->axisRect()->axis(QCPAxis::atBottom,1),ui->customPlot->yAxis);
     ui->customPlot->graph(12);
     ui->customPlot->graph(12)->setName("P2 Torque");
-    ui->customPlot->graph(12)->setScatterStyle(QCPScatterStyle::ssSquare);
-    ui->customPlot->graph(12)->setPen(QPen (Qt::blue));
-
+    ui->customPlot->graph(12)->setPen(pen12);
     ui->customPlot->graph(8)->removeFromLegend();
     ui->customPlot->graph(9)->removeFromLegend();
     ui->customPlot->graph(10)->removeFromLegend();
     ui->customPlot->graph(11)->removeFromLegend();
     ui->customPlot->graph(12)->removeFromLegend();
 
-
-
     //##############################--profile 3 setup--##################################////////////////////
     //#########------Power
+    QPen pen13;
+    pen13.setWidth(2);
+    pen13.setColor(QColor(153,153,0));
     ui->customPlot->addGraph(ui->customPlot->xAxis,ui->customPlot->axisRect()->axis(QCPAxis::atLeft,1));
     ui->customPlot->graph(13);
     ui->customPlot->graph(13)->setName("P3 Power");
-    ui->customPlot->graph(13)->setScatterStyle(QCPScatterStyle::ssTriangle);
-    ui->customPlot->graph(13)->setPen(QPen (Qt::green));
+
+    ui->customPlot->graph(13)->setPen(pen13);
     //#########------Torque
+    QPen pen14;
+    pen14.setWidth(2);
+    pen14.setColor(QColor(255,0,255));
     ui->customPlot->addGraph(ui->customPlot->xAxis,ui->customPlot->yAxis);
     ui->customPlot->graph(14);
     ui->customPlot->graph(14)->setName("P3 Torque");
-    ui->customPlot->graph(14)->setScatterStyle(QCPScatterStyle::ssTriangle);
-    ui->customPlot->graph(14)->setPen(QPen (Qt::blue));
+    ui->customPlot->graph(14)->setPen(pen14);
     //#########------RPM
+    QPen pen15;
+    pen15.setWidth(2);
+    pen15.setColor(QColor(0,204,204));
     ui->customPlot->addGraph(ui->customPlot->xAxis,ui->customPlot->yAxis2);
     ui->customPlot->graph(15);
     ui->customPlot->graph(15)->setName("P3 RPM");
-    ui->customPlot->graph(15)->setScatterStyle(QCPScatterStyle::ssTriangle);
-    ui->customPlot->graph(15)->setPen(QPen (Qt::red));
+
+    ui->customPlot->graph(15)->setPen(pen15);
     //#########------power vs rpm
+    QPen pen16;
+    pen16.setWidth(2);
+    pen16.setColor(QColor(153,153,0));
     ui->customPlot->addGraph(ui->customPlot->axisRect()->axis(QCPAxis::atBottom,1),ui->customPlot->axisRect()->axis(QCPAxis::atLeft,1));
     ui->customPlot->graph(16);
     ui->customPlot->graph(16)->setName("P3 Power");
-    ui->customPlot->graph(16)->setScatterStyle(QCPScatterStyle::ssTriangle);
-    ui->customPlot->graph(16)->setPen(QPen (Qt::green));
+
+    ui->customPlot->graph(16)->setPen(pen16);
     //#########------Torque vs rpm
+    QPen pen17;
+    pen17.setWidth(2);
+    pen17.setColor(QColor(255,0,255));
     ui->customPlot->addGraph(ui->customPlot->axisRect()->axis(QCPAxis::atBottom,1),ui->customPlot->yAxis);
     ui->customPlot->graph(17);
     ui->customPlot->graph(17)->setName("P3 Torque");
-    ui->customPlot->graph(17)->setScatterStyle(QCPScatterStyle::ssTriangle);
-    ui->customPlot->graph(17)->setPen(QPen (Qt::blue));
+
+    ui->customPlot->graph(17)->setPen(pen17);
 
     ui->customPlot->graph(13)->removeFromLegend();
     ui->customPlot->graph(14)->removeFromLegend();
@@ -297,35 +336,52 @@ void MainWindow::graphsetup()
 
     //##############################--profile 4 setup--##################################////////////////////
     //#########------Power
+    QPen pen18;
+    pen18.setWidth(2);
+    pen18.setColor(QColor(255,153,153));
+
     ui->customPlot->addGraph(ui->customPlot->xAxis,ui->customPlot->axisRect()->axis(QCPAxis::atLeft,1));
     ui->customPlot->graph(18);
     ui->customPlot->graph(18)->setName("P4 Power");
-    ui->customPlot->graph(18)->setScatterStyle(QCPScatterStyle::ssCircle);
-    ui->customPlot->graph(18)->setPen(QPen (Qt::green));
+
+    ui->customPlot->graph(18)->setPen(pen18);
     //#########------Torque
+    QPen pen19;
+    pen19.setWidth(2);
+    pen19.setColor(QColor(204,255,153));
     ui->customPlot->addGraph(ui->customPlot->xAxis,ui->customPlot->yAxis);
     ui->customPlot->graph(19);
     ui->customPlot->graph(19)->setName("P4 Torque");
-    ui->customPlot->graph(19)->setScatterStyle(QCPScatterStyle::ssCircle);
-    ui->customPlot->graph(19)->setPen(QPen (Qt::blue));
+
+    ui->customPlot->graph(19)->setPen(pen19);
     //#########------RPM
+    QPen pen20;
+    pen20.setWidth(2);
+    pen20.setColor(QColor(128,128,128));
     ui->customPlot->addGraph(ui->customPlot->xAxis,ui->customPlot->yAxis2);
     ui->customPlot->graph(20);
     ui->customPlot->graph(20)->setName("P4 RPM");
-    ui->customPlot->graph(20)->setScatterStyle(QCPScatterStyle::ssCircle);
-    ui->customPlot->graph(20)->setPen(QPen (Qt::red));
+
+    ui->customPlot->graph(20)->setPen(pen20);
     //#########------power vs rpm
+    QPen pen21;
+    pen21.setWidth(2);
+    pen21.setColor(QColor(255,153,153));
+
     ui->customPlot->addGraph(ui->customPlot->axisRect()->axis(QCPAxis::atBottom,1),ui->customPlot->axisRect()->axis(QCPAxis::atLeft,1));
     ui->customPlot->graph(21);
     ui->customPlot->graph(21)->setName("P4 Power");
-    ui->customPlot->graph(21)->setScatterStyle(QCPScatterStyle::ssCircle);
-    ui->customPlot->graph(21)->setPen(QPen (Qt::green));
+
+    ui->customPlot->graph(21)->setPen(pen21);
     //#########------Torque vs rpm
+    QPen pen22;
+    pen22.setWidth(2);
+    pen22.setColor(QColor(204,255,153));
     ui->customPlot->addGraph(ui->customPlot->axisRect()->axis(QCPAxis::atBottom,1),ui->customPlot->yAxis);
     ui->customPlot->graph(22);
     ui->customPlot->graph(22)->setName("P4 Torque");
-    ui->customPlot->graph(22)->setScatterStyle(QCPScatterStyle::ssCircle);
-    ui->customPlot->graph(22)->setPen(QPen (Qt::blue));
+
+    ui->customPlot->graph(22)->setPen(pen22);
 
     ui->customPlot->graph(18)->removeFromLegend();
     ui->customPlot->graph(19)->removeFromLegend();
@@ -335,6 +391,9 @@ void MainWindow::graphsetup()
 
 }
 
+//####################################################################################################################//
+//---------------------------------------------Status Bar Update on each action---------------------------------------//
+//####################################################################################################################//
 
 void MainWindow::statusupdate(QString message)
 {
@@ -342,152 +401,32 @@ void MainWindow::statusupdate(QString message)
                 message);
 }
 
-void MainWindow::on_capture_clicked()
+//####################################################################################################################//
+//---------------------------------------------data caputing and computing area---------------------------------------//
+//####################################################################################################################//
+
+void MainWindow::clearTemp()
 {
-    if (ok!=false)
-    {  qDebug()<<timer.restart();
-        c= 0;
-        lastPointKey = 0;
-c1= 0;
-        connect(&dataTimer, SIGNAL(timeout()), this, SLOT(realtimeDataSlot()));
-        dataTimer.start(0);}
-    else
-    {    QMessageBox msgBox3;
-        msgBox3.setWindowTitle("Information");
-        msgBox3.setText("Set Wheel Diameter to Begin");
-        // msgBox.addButton(QMessageBox::Yes);
-        msgBox3.setStandardButtons(QMessageBox::Ok);
-        msgBox3.exec();
-
-
-    }
-
+      qtime.clear();  qrpm.clear();qpwr.clear();qtrq.clear();
 }
 
-void MainWindow::on_stopCapture_clicked()
-{
-    dataTimer.stop();
-    QMessageBox msgBox3;
-    msgBox3.setWindowTitle("Information");
-    msgBox3.setText("Data Captured in temp memory \n save it to a profile");
-    // msgBox.addButton(QMessageBox::Yes);
-    msgBox3.setStandardButtons(QMessageBox::Ok);
-    msgBox3.exec();
-
-
-
-
-}
-
-void MainWindow::on_w_button_clicked()
-{
-    QString wdata = ui ->wtext->text();
-    float wdata1=wdata.toFloat(&ok);
-    qDebug()<<wdata;
-    if (wdata1==0 || ok == false)
-    {
-        statusupdate("Enter Valid Number (No Alphanumeric or Special Characetrs) ");
-        QMessageBox msgBox3;
-        msgBox3.setWindowTitle("Information");
-        msgBox3.setText("Set Valid Number");
-        // msgBox.addButton(QMessageBox::Yes);
-        msgBox3.setStandardButtons(QMessageBox::Ok);
-        msgBox3.exec();
-
-    }
-
-    else if (ok==true)
-    {
-
-        statusupdate("Wheel diameter entered is: "+ wdata + " mm . Select Profile To begin ");
-        wheeldia = wdata1;
-        QString b = QString::number(wheeldia);
-        ui->w_Status->setText(b);
-        on_combo_p_activated(0);
-    }
-}
-
-void MainWindow::on_combo_p_activated(int index)
-{
-    if (ok!=false)
-    {
-        switch(index)
-        {case 0:
-            statusupdate("profile 1");
-            if(p1_rpm.isEmpty()!=true)
-            { ui->profile_status->setText("Has data");
-                ui->sframe->setStyleSheet("background-color: rgb(255,0,0)");
-            }
-            else
-            {       ui->profile_status->setText("Empty");
-                ui->sframe->setStyleSheet("background-color: rgb(0,255,0)");
-            }
-
-            p_index = 0;
-
-            break;
-        case 1:
-            statusupdate("profile 2");
-            if(p2_rpm.isEmpty()!=true)
-            {  ui->profile_status->setText("Has data");
-                ui->sframe->setStyleSheet("background-color: rgb(255,0,0)");}
-            else
-            {   ui->profile_status->setText("Empty");
-                ui->sframe->setStyleSheet("background-color: rgb(0,255,0)");}
-
-            p_index = 1;
-
-            break;
-        case 2:
-            statusupdate("profile 3");
-            if(p3_rpm.isEmpty()!=true)
-            {   ui->profile_status->setText("Has data");
-                ui->sframe->setStyleSheet("background-color: rgb(255,0,0)");}
-            else
-            {  ui->profile_status->setText("Empty");
-                ui->sframe->setStyleSheet("background-color: rgb(0,255,0)");}
-
-            p_index = 2;
-            break;
-        case 3:
-            statusupdate("profile 4");
-            if(p4_rpm.isEmpty()!=true)
-            {    ui->profile_status->setText("Has data");
-                ui->sframe->setStyleSheet("background-color: rgb(255,0,0)");}
-            else
-            {  ui->profile_status->setText("Empty");
-                ui->sframe->setStyleSheet("background-color: rgb(0,255,0)");}
-
-            p_index = 3;
-            break;
-        }
-    }
-    else
-    {
-        statusupdate("Enter WHEEL Diameter to select profile and begin: " );
-    }
-
-}
-
-//############################################################ data caputing and computing area ######################################
 void MainWindow::realtimeDataSlot()
 {    // calculate two new data points:
     double key = timer.elapsed()/1000.0; // time elapsed since start of demo, in seconds
-    if (key-lastPointKey > 0.02) // at most add point every 2 ms
+    if (key-lastPointKey > 0.05) // at most add point every 2 ms
     {
         double rpm= 0;
         //double torq= 0;
         //double power = 0;
-
-
+        rpm = spi();
         if (c>19)
         {
- rpm = spi();
+
             double avg_trq = avgtrq();
             double avg_pwr = avgpwr();
             if(c1>99)
             {
-                ui->customPlot->graph(1)->addData(key, rpm);
+            ui->customPlot->graph(1)->addData(key, rpm);
             ui->customPlot->graph(0)->addData(key, avg_trq);
             ui->customPlot->graph(2)->addData(key,avg_pwr);
             max(rpm,avg_trq,avg_pwr);
@@ -513,17 +452,14 @@ void MainWindow::realtimeDataSlot()
 
         else
         {
-                rpm = spi();
-                double t=torque(0.02,rpm);
+
+                double t=torque(lastPointKey-key,rpm);
                 MATRQ.append(t);
-                 MAPWR.append(powercal(t,rpm));
+                MAPWR.append(powercal(t));
 
                 c++;
                 c1++;
             }
-
-
-
 
     }
     // make key axis range scroll with the data (at a constant range size of 8):
@@ -585,22 +521,29 @@ double MainWindow::spi()
 
 }
 
-double MainWindow::powercal(double t, double r)
+double MainWindow::powercal(double t)
 {
-    return (t*r)/63025;
+    return (t*wr1)/1000;
 }
-float MainWindow::torque(float a, int trpm)
+float MainWindow::torque(float t, int trpm)
 {    //qDebug()<<a;
-     float alpha;
-      float inertia = 0.71;
-       float deltarpm ;
-        float deltatime;
-         deltarpm = (2*3.14*trpm) - (2*3.14*rpm1);
-          rpm1=trpm;
-           deltatime = a-time0;
-            time0=time0+a;
-             alpha = deltarpm/a;
-              return (inertia*alpha);
+    if(trpm!=0)
+    {double Nw = (406.4/wheeldia)*trpm;
+     double ww2= (2*3.14*Nw)/60;
+        double wr2 = (2*3.14*trpm)/60;
+     double ar = (wr2-wr1)/t;
+     //double aw= (ww2-ww1)/t ;
+
+     double Tr =8.01*ar;
+
+     ww1 =ww2;
+     wr1 =wr2;
+     return (wr2/ww2)*Tr;
+
+    }
+    else
+        return 0;
+
 
 
 }
@@ -620,31 +563,6 @@ void MainWindow::max(double arpm, double atrq, double apwr)
     ui->maxtrq->display(maxtrq);
     ui->maxpwr->display(maxpwr);
 }
-
-void MainWindow::on_clear_plot_capture_clicked()
-{
-    ui->customPlot->graph(0)->data()->clear();
-    ui->customPlot->graph(1)->data()->clear();
-    ui->customPlot->graph(2)->data()->clear();
-    ui->customPlot->yAxis->setRange(0,4000);
-    ui->customPlot->yAxis2->setRange(0,10000);
-    ui->customPlot->axisRect()->axis(QCPAxis::atLeft,1)->setRange(0,300);
-    ui->customPlot->xAxis->setRange(0,14);
-
-    ui->customPlot->replot();
-    ui->statusbar->showMessage(
-                QString("%1 FPS, Total Data points: %2")
-                .arg(ui->customPlot->graph(0)->data()->size()+ui->customPlot->graph(1)->data()->size())
-                , 0);
-    maxrpm = 0 ;     maxpwr =0;    maxtrq = 0;
-    qtime.clear();     qpwr.clear();     qtrq.clear();    qrpm.clear();
-    ui->maxrpm->display(maxrpm);     ui->maxtrq->display(maxtrq);    ui->maxpwr->display(maxpwr);
-    ui->rpm->display(0);    ui->torque->display(0);    ui->power->display(0);
-}
-
-
-
-
 double MainWindow::avgtrq()
 {
  return 1*std::accumulate(MATRQ.begin(),MATRQ.end(), 0LL)/MATRQ.size();
@@ -657,9 +575,96 @@ double MainWindow::avgpwr()
 
 }
 
+//####################################################################################################################//
+//---------------------------------------------Button Assignment and logic computing area-----------------------------//
+//####################################################################################################################//
 
+void MainWindow::on_w_button_clicked()
+{
+    QString wdata = ui ->wtext->text();
+    float wdata1=wdata.toFloat(&ok);
+    qDebug()<<wdata;
+    if (wdata1==0 || ok == false)
+    {
+        statusupdate("Enter Valid Number (No Alphanumeric or Special Characetrs) ");
+        QMessageBox msgBox3;
+        msgBox3.setWindowTitle("Information");
+        msgBox3.setText("Set Valid Number");
+        // msgBox.addButton(QMessageBox::Yes);
+        msgBox3.setStandardButtons(QMessageBox::Ok);
+        msgBox3.exec();
 
+    }
 
+    else if (ok==true)
+    {
+
+        statusupdate("Wheel diameter entered is: "+ wdata + " mm . Select Profile To begin ");
+        wheeldia = wdata1;
+        QString b = QString::number(wheeldia);
+        ui->w_Status->setText(b);
+        on_combo_p_activated(0);
+    }
+}
+void MainWindow::on_combo_p_activated(int index)
+{
+    if (ok!=false)
+    {
+        switch(index)
+        {case 0:
+            statusupdate("profile 1");
+            if(p1_rpm.isEmpty()!=true)
+            { ui->profile_status->setText("Has data");
+                ui->sframe->setStyleSheet("background-color: rgb(255,0,0)");
+            }
+            else
+            {       ui->profile_status->setText("Empty");
+                ui->sframe->setStyleSheet("background-color: rgb(0,255,0)");
+            }
+
+            p_index = 0;
+
+            break;
+        case 1:
+            statusupdate("profile 2");
+            if(p2_rpm.isEmpty()!=true)
+            {  ui->profile_status->setText("Has data");
+                ui->sframe->setStyleSheet("background-color: rgb(255,0,0)");}
+            else
+            {   ui->profile_status->setText("Empty");
+                ui->sframe->setStyleSheet("background-color: rgb(0,255,0)");}
+
+            p_index = 1;
+
+            break;
+        case 2:
+            statusupdate("profile 3");
+            if(p3_rpm.isEmpty()!=true)
+            {   ui->profile_status->setText("Has data");
+                ui->sframe->setStyleSheet("background-color: rgb(255,0,0)");}
+            else
+            {  ui->profile_status->setText("Empty");
+                ui->sframe->setStyleSheet("background-color: rgb(0,255,0)");}
+
+            p_index = 2;
+            break;
+        case 3:
+            statusupdate("profile 4");
+            if(p4_rpm.isEmpty()!=true)
+            {    ui->profile_status->setText("Has data");
+                ui->sframe->setStyleSheet("background-color: rgb(255,0,0)");}
+            else
+            {  ui->profile_status->setText("Empty");
+                ui->sframe->setStyleSheet("background-color: rgb(0,255,0)");}
+
+            p_index = 3;
+            break;
+        }
+    }
+    else
+    {
+        statusupdate("Enter WHEEL Diameter to select profile and begin: " );
+    }}
 void MainWindow::on_savetoprofile_r_clicked()
 {
 
@@ -713,6 +718,7 @@ void MainWindow::on_savetoprofile_r_clicked()
                     ui->customPlot->graph(5)->rescaleValueAxis(true);
                     ui->customPlot->graph(6)->rescaleValueAxis(true);
                     ui->customPlot->graph(7)->rescaleValueAxis(true);
+                    ui->customPlot->rescaleAxes();
                 }
                 ui->progressBar->setVisible(false);
 
@@ -747,6 +753,7 @@ void MainWindow::on_savetoprofile_r_clicked()
                         ui->customPlot->graph(5)->rescaleValueAxis(true);
                         ui->customPlot->graph(6)->rescaleValueAxis(true);
                         ui->customPlot->graph(7)->rescaleValueAxis(true);
+                        ui->customPlot->rescaleAxes();
 
 
 
@@ -789,10 +796,7 @@ void MainWindow::on_savetoprofile_r_clicked()
                     ui->customPlot->graph(10)->rescaleValueAxis(true);
                     ui->customPlot->graph(11)->rescaleValueAxis(true);
                     ui->customPlot->graph(12)->rescaleValueAxis(true);
-
-
-
-
+                    ui->customPlot->rescaleAxes();
 
                 }
                 ui->progressBar->setVisible(false);
@@ -829,6 +833,7 @@ void MainWindow::on_savetoprofile_r_clicked()
                         ui->customPlot->graph(10)->rescaleValueAxis(true);
                         ui->customPlot->graph(11)->rescaleValueAxis(true);
                         ui->customPlot->graph(12)->rescaleValueAxis(true);
+                        ui->customPlot->rescaleAxes();
 
                     }
                     ui->progressBar->setVisible(false);
@@ -871,6 +876,7 @@ void MainWindow::on_savetoprofile_r_clicked()
                     ui->customPlot->graph(15)->rescaleValueAxis(true);
                     ui->customPlot->graph(16)->rescaleValueAxis(true);
                     ui->customPlot->graph(17)->rescaleValueAxis(true);
+                    ui->customPlot->rescaleAxes();
 
 
 
@@ -912,6 +918,7 @@ void MainWindow::on_savetoprofile_r_clicked()
                         ui->customPlot->graph(15)->rescaleValueAxis(true);
                         ui->customPlot->graph(16)->rescaleValueAxis(true);
                         ui->customPlot->graph(17)->rescaleValueAxis(true);
+                        ui->customPlot->rescaleAxes();
                     }
                     ui->progressBar->setVisible(false);
 
@@ -953,6 +960,7 @@ void MainWindow::on_savetoprofile_r_clicked()
                     ui->customPlot->graph(20)->rescaleValueAxis(true);
                     ui->customPlot->graph(21)->rescaleValueAxis(true);
                     ui->customPlot->graph(22)->rescaleValueAxis(true);
+                    ui->customPlot->rescaleAxes();
 
 
 
@@ -991,6 +999,7 @@ void MainWindow::on_savetoprofile_r_clicked()
                         ui->customPlot->graph(20)->rescaleValueAxis(true);
                         ui->customPlot->graph(21)->rescaleValueAxis(true);
                         ui->customPlot->graph(22)->rescaleValueAxis(true);
+                        ui->customPlot->rescaleAxes();
 
                     }
                     ui->progressBar->setVisible(false);
@@ -1028,7 +1037,37 @@ void MainWindow::on_savetoprofile_r_clicked()
 
 
 }
+void MainWindow::on_clear_plot_capture_clicked()
+{
+    ui->customPlot->graph(0)->data()->clear();
+    ui->customPlot->graph(1)->data()->clear();
+    ui->customPlot->graph(2)->data()->clear();
+    ui->customPlot->yAxis->setRange(0,4000);
+    ui->customPlot->yAxis2->setRange(0,10000);
+    ui->customPlot->axisRect()->axis(QCPAxis::atLeft,1)->setRange(0,300);
+    ui->customPlot->xAxis->setRange(0,14);
 
+    ui->customPlot->replot();
+    ui->statusbar->showMessage(
+                QString("%1 FPS, Total Data points: %2")
+                .arg(ui->customPlot->graph(0)->data()->size()+ui->customPlot->graph(1)->data()->size())
+                , 0);
+    maxrpm = 0 ;     maxpwr =0;    maxtrq = 0;
+    qtime.clear();     qpwr.clear();     qtrq.clear();    qrpm.clear();
+    ui->maxrpm->display(maxrpm);     ui->maxtrq->display(maxtrq);    ui->maxpwr->display(maxpwr);
+    ui->rpm->display(0);    ui->torque->display(0);    ui->power->display(0);
+}
+void MainWindow::on_stopCapture_clicked()
+{
+    dataTimer.stop();
+    QMessageBox msgBox3;
+    msgBox3.setWindowTitle("Information");
+    msgBox3.setText("Data Captured in temp memory \n save it to a profile");
+    // msgBox.addButton(QMessageBox::Yes);
+    msgBox3.setStandardButtons(QMessageBox::Ok);
+    msgBox3.exec();
+
+}
 void MainWindow::on_clear_p_clicked()
 {
     QMessageBox msgBox3;
@@ -1130,10 +1169,30 @@ void MainWindow::on_clear_p_clicked()
     }
     on_combo_p_activated(p_index);
 
+}
+void MainWindow::on_capture_clicked()
+{
+    if (ok!=false)
+    {  qDebug()<<timer.restart();
+        c= 0;
+        lastPointKey = 0;
+c1= 0;
+wr1=0;
+ww1=0;
+        connect(&dataTimer, SIGNAL(timeout()), this, SLOT(realtimeDataSlot()));
+        dataTimer.start(0);}
+    else
+    {    QMessageBox msgBox3;
+        msgBox3.setWindowTitle("Information");
+        msgBox3.setText("Set Wheel Diameter to Begin");
+        // msgBox.addButton(QMessageBox::Yes);
+        msgBox3.setStandardButtons(QMessageBox::Ok);
+        msgBox3.exec();
 
+
+    }
 
 }
-
 void MainWindow::on_updatepPlotView_clicked()
 {  // ui->customPlot->plotLayout()->addElement(0,0,title);
     ui->customPlot->replot();
@@ -1255,6 +1314,7 @@ void MainWindow::on_chartviewtype_activated(int index)
             //  ui->customPlot->graph(21)->addToLegend();
             //  ui->customPlot->graph(22)->addToLegend();
         }
+        ui->customPlot->rescaleAxes();
 
 
 
@@ -1373,6 +1433,7 @@ void MainWindow::on_chartviewtype_activated(int index)
             //  ui->customPlot->graph(21)->addToLegend();
             //  ui->customPlot->graph(22)->addToLegend();
         }
+        ui->customPlot->rescaleAxes();
 
 
 
@@ -1499,6 +1560,7 @@ void MainWindow::on_chartviewtype_activated(int index)
             //  ui->customPlot->graph(21)->addToLegend();
             //  ui->customPlot->graph(22)->addToLegend();
         }
+        ui->customPlot->rescaleAxes();
 
         break;}
     case 3:
@@ -1619,6 +1681,7 @@ void MainWindow::on_chartviewtype_activated(int index)
             //  ui->customPlot->graph(21)->addToLegend();
             //  ui->customPlot->graph(22)->addToLegend();
         }
+        ui->customPlot->rescaleAxes();
 
         break;}
     case 4:
@@ -1737,6 +1800,7 @@ void MainWindow::on_chartviewtype_activated(int index)
             //  ui->customPlot->graph(21)->addToLegend();
             //  ui->customPlot->graph(22)->addToLegend();
         }
+        ui->customPlot->rescaleAxes();
 
 
 
@@ -1859,6 +1923,7 @@ void MainWindow::on_chartviewtype_activated(int index)
             ui->customPlot->graph(21)->addToLegend();
             //  ui->customPlot->graph(22)->addToLegend();
         }
+        ui->customPlot->rescaleAxes();
 
 
 
@@ -1981,6 +2046,7 @@ void MainWindow::on_chartviewtype_activated(int index)
             //  ui->customPlot->graph(21)->addToLegend();
             ui->customPlot->graph(22)->addToLegend();
         }
+        ui->customPlot->rescaleAxes();
 
         break;}
     case 7:
@@ -2100,14 +2166,9 @@ void MainWindow::on_chartviewtype_activated(int index)
             ui->customPlot->graph(21)->addToLegend();
             ui->customPlot->graph(22)->addToLegend();
         }
+        ui->customPlot->rescaleAxes();
 
-
-
-
-
-
-
-        break;}
+       break;}
 
 
     }
@@ -2163,12 +2224,11 @@ void MainWindow::on_p4CheckBox_toggled(bool checked)
     on_chartviewtype_activated(chartindex);
 }
 
-
 void MainWindow::on_tabWidget_currentChanged(int index)
 {
     switch(index)
     { case 0:
-    {
+    {ui->chartviewtype->setCurrentIndex(0);
         ui->customPlot->graph(0)->addToLegend();
         ui->customPlot->graph(1)->addToLegend();
         ui->customPlot->graph(2)->addToLegend();
@@ -2200,6 +2260,9 @@ void MainWindow::on_tabWidget_currentChanged(int index)
         ui->customPlot->graph(20)->removeFromLegend();
         ui->customPlot->graph(21)->removeFromLegend();
         ui->customPlot->graph(22)->removeFromLegend();
+
+        ui->customPlot->replot();
+        ui->customPlot->repaint();
         on_p1CheckBox_toggled(false);
         on_p2CheckBox_toggled(false);
         on_p3CheckBox_toggled(false);
@@ -2212,9 +2275,7 @@ void MainWindow::on_tabWidget_currentChanged(int index)
         ui->p3CheckBox->setChecked(false);
         ui->p4CheckBox->setChecked(false);
         ui->combo_p->setCurrentIndex(p_index);
-        ui->chartviewtype->setCurrentIndex(0);
-        ui->customPlot->replot();
-        ui->customPlot->repaint();
+
 
         break;
 
@@ -2237,10 +2298,10 @@ void MainWindow::on_tabWidget_currentChanged(int index)
 
 
     }}
+//####################################################################################################################//
+//---------------------------------------------Saving CSV and uploading  area ----------------------------------------//
+//####################################################################################################################//
 
-
-
-//##################################################################### saving file #######################################################
 void MainWindow::on_saveAs_clicked()
 {
     QString outputDir = "/home/pi/Desktop";
@@ -2324,7 +2385,7 @@ void MainWindow::on_saveAs_clicked()
 
 
 }
-//------------------_##########################  save chart image #########################------------------
+
 void MainWindow::on_saveImage_clicked()
 {
 
@@ -2543,6 +2604,6 @@ void MainWindow::on_clearAllProfile_clicked()
 
     }
     else
-        statusupdate("Canceld");
+        statusupdate("Cancled");
 
 }

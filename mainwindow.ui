@@ -109,7 +109,7 @@
          </font>
         </property>
         <property name="text">
-         <string>Power (hp)</string>
+         <string>Power (Kw)</string>
         </property>
         <property name="alignment">
          <set>Qt::AlignCenter</set>
@@ -286,7 +286,7 @@
      <enum>QTabWidget::Rounded</enum>
     </property>
     <property name="currentIndex">
-     <number>1</number>
+     <number>0</number>
     </property>
     <widget class="QWidget" name="tab">
      <attribute name="title">

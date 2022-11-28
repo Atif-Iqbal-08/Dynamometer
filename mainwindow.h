@@ -25,9 +25,10 @@ public:
     void max(double , double ,double);
 
     double spi();
-    double powercal(double, double);
+    double powercal(double);
     void graphsetup();
     double avgtrq();double avgpwr();
+    void clearTemp();
 public slots:
     void realtimeDataSlot();
 private slots:
@@ -85,6 +86,8 @@ private:
     QTimer dataTimer;
     QElapsedTimer timer;
     int p_index =0 ;
+
+    double wr1 , ww1 ;
 
     double maxrpm = 0, maxtrq = 0, maxpwr = 0;
     double lastPointKey = 0;
