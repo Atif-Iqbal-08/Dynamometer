@@ -63,6 +63,6 @@ int main(int argc, char *argv[])
         qDebug()<<"Unauthorized Device";
 
 
-       // w.close();
+        w.close();
     }
 }
