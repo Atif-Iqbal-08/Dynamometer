@@ -1,3 +1,12 @@
+/*
+ *   Copyright (C) 2022 by Atif Iqbal
+ *   http://emfluxmotors.com
+ */
+
+
+
+
+
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
@@ -7,7 +16,7 @@
 #include <QElapsedTimer>
 #include<QProgressDialog>
 #include "qcustomplot.h"
-
+#include "qcgaugewidget.h"
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
@@ -21,10 +30,10 @@ public:
     ~MainWindow();
 
     void statusupdate(QString );
-    float torque(float , int );
-    void max(double , double ,double);
-
-    double spi();
+    double torque(double , double );
+    void max(double , double ,double, double);
+double speed();
+    void spi();
     double powercal(double);
     void graphsetup();
     double avgtrq();double avgpwr();
@@ -87,7 +96,8 @@ private:
     QElapsedTimer timer;
     int p_index =0 ;
 
-    double wr1 , ww1 ;
+    double wr1, wr2, Ww , Ar, Rpmr;
+    double RPMWHEEL, Vspeed,maxspeed;
 
     double maxrpm = 0, maxtrq = 0, maxpwr = 0;
     double lastPointKey = 0;
@@ -101,6 +111,23 @@ private:
     int c; //counter
 
     QVector<double> MATRQ, MAPWR;
+    double t,p;
+    double avg_trq, avg_pwr , Gpower , Gtrq;
+
+
+    // dials
+    QcGaugeWidget * mSpeedGauge , *mPowerGuage , *mTorqueGuage , *mRpmGuage ;
+    QcNeedleItem *mSpeedNeedle , *mPowerNeedle , *mTorqueNeedle , *mRpmNeedle;
+    int c1= 0;
+    int time_c, i =0;
+
+    int time0;
+    int rpm1;
+    unsigned char buffer[4]{0};
+    int chartindex;
+    bool p1,p2,p3,p4;
+    double instW, instA;
+
 
 
 
