@@ -11,17 +11,20 @@ CONFIG -= import_plugins
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    dialog.cpp \
     main.cpp \
     mainwindow.cpp \
     qcgaugewidget.cpp \
     qcustomplot.cpp
 
 HEADERS += \
+    dialog.h \
     mainwindow.h \
     qcgaugewidget.h \
     qcustomplot.h
 
 FORMS += \
+    dialog.ui \
     mainwindow.ui
     INCLUDEPATH +=$$PWD
 

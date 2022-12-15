@@ -37,7 +37,7 @@
 QcGaugeWidget::QcGaugeWidget(QWidget *parent) :
     QWidget(parent)
 {
-    setMinimumSize(200,200);
+    setMinimumSize(250,250);
 }
 
 QcBackgroundItem *QcGaugeWidget::addBackground(float position)
@@ -490,11 +490,11 @@ QcColorBand::QcColorBand(QObject *parent) :
     QPair<QColor,float> pair;
 
     pair.first = Qt::green;
-    pair.second = 50;
+    pair.second = 10;
     mBandColors.append(pair);
 
     pair.first = Qt::darkGreen;
-    pair.second = 70;
+    pair.second = 50;
     mBandColors.append(pair);
 
     pair.first = Qt::red;
@@ -781,7 +781,7 @@ QcValuesItem::QcValuesItem(QObject *parent) :
 {
     setPosition(70);
     mColor = Qt::black;
-    mStep =10;
+    mStep = 10;
 }
 
 

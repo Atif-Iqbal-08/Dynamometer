@@ -44,9 +44,9 @@ int main(int argc, char *argv[])
     int i5 = static_cast<int>(p5);
     unsigned char p6= (unsigned char)ifr.ifr_hwaddr.sa_data[5];
     int i6 = static_cast<int>(p6);
-     w.show();
+    // w.show();
 
-   // qDebug()<<p1<<p2<<p3<<p4<<p5<<p6;
+  //  qDebug()<<"Mac Id: "<<p1<<p2<<p3<<p4<<p5<<p6;
 
     if(i1== 228 && i2 == 95 && i3 == 1 && i4 == 111 && i5 == 11 && i6 == 178 )
     {
@@ -61,8 +61,10 @@ int main(int argc, char *argv[])
     else
     {
         qDebug()<<"Unauthorized Device";
+        w.show();
+        return a.exec();
 
 
-        w.close();
+       // w.close();
     }
 }

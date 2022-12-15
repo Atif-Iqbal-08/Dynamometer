@@ -75,6 +75,7 @@ public:
     QcLabelItem* addLabel(float position);
     QcGlassItem* addGlass(float position);
     QcAttitudeMeter* addAttitudeMeter(float position);
+    //QcDegreesItem* setStep(float step);
 
 
     void addItem(QcItem* item, float position);
