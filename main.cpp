@@ -11,7 +11,7 @@
 #include <QProgressBar>
 #include <stdio.h>
 #include <string.h>
-
+#include "qdebug.h"
 #include<sys/types.h>
 #include<sys/socket.h>
 #include<sys/ioctl.h>
@@ -22,16 +22,13 @@ int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
     MainWindow w;
-
-
     int fd;
     struct ifreq ifr;
     fd = socket(AF_INET,SOCK_DGRAM , 0);
     ifr.ifr_addr.sa_family = AF_INET;
     strncpy(ifr.ifr_name, "eth0" ,IFNAMSIZ-1 );
     ioctl(fd , SIOCGIFHWADDR , &ifr);
-    // pclose(fd);
-
+    //pclose(fd);
     unsigned char p1= (unsigned char)ifr.ifr_hwaddr.sa_data[0];
     int i1 = static_cast<int>(p1);
     unsigned char p2=(unsigned char)ifr.ifr_hwaddr.sa_data[1];
@@ -44,9 +41,9 @@ int main(int argc, char *argv[])
     int i5 = static_cast<int>(p5);
     unsigned char p6= (unsigned char)ifr.ifr_hwaddr.sa_data[5];
     int i6 = static_cast<int>(p6);
-     w.show();
+    // w.show();
 
-   // qDebug()<<p1<<p2<<p3<<p4<<p5<<p6;
+  qDebug()<<"Mac Id: "<<p1<<p2<<p3<<p4<<p5<<p6;
 
     if(i1== 228 && i2 == 95 && i3 == 1 && i4 == 111 && i5 == 11 && i6 == 178 )
     {
@@ -61,8 +58,10 @@ int main(int argc, char *argv[])
     else
     {
         qDebug()<<"Unauthorized Device";
+        w.show();
+        return a.exec();
 
 
-        w.close();
+       // w.close();
     }
 }

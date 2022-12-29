@@ -64,7 +64,7 @@ class QCGAUGE_DECL QcGaugeWidget : public QWidget
 {
     Q_OBJECT
 public:
-    explicit QcGaugeWidget(QWidget *parent = 0);    
+    explicit QcGaugeWidget(QWidget *parent = 0);
 
     QcBackgroundItem* addBackground(float position);
     QcDegreesItem* addDegrees(float position);
